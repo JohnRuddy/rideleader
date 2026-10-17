@@ -36,13 +36,27 @@ def _index(error=None, status=200):
                            days_to_next=(nxt.ride.date - today).days if nxt else None), status
 
 
+def _production() -> bool:
+    return current_app.config.get("RLK_ENV") == "production"
+
+
+@bp.get("/welcome")
+def welcome():
+    """The product page. Always reachable; it is also what signed-out visitors see at / in production."""
+    return render_template("landing.html")
+
+
 @bp.get("/")
 def index():
+    if g.user is None and _production():
+        return welcome()
     return _index()
 
 
 @bp.post("/routes/upload")
 def upload():
+    if g.user is None and _production():       # no anonymous writes on the public site
+        return redirect(url_for("auth.login", next="/"))
     f = request.files.get("gpx")
     if not f or not f.filename:
         return _index("Choose a GPX file first.", 400)

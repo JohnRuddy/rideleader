@@ -107,6 +107,21 @@ def create_app(config: dict | None = None) -> Flask:
         with app.test_request_context("/"):
             click.echo(issue_login_link(email))
 
+    @app.cli.command("mail-test")
+    @click.argument("to")
+    def mail_test(to):
+        """Send a test email to TO through the configured SMTP server, to prove delivery end to end."""
+        from .mailer import MailError, get_mailer, mail_is_real
+        with app.app_context():
+            if not mail_is_real():
+                raise click.ClickException("SMTP_HOST is not set; nothing would leave this server.")
+            try:
+                get_mailer().send(to, "Ride Leader Kit: test email", "If you can read this, outgoing email works.")
+            except MailError as e:
+                raise click.ClickException(f"Sending failed ({e}). Check SMTP_HOST, SMTP_PORT, SMTP_USER, "
+                                           "SMTP_PASSWORD and that the sender domain is verified with the provider.")
+            click.echo(f"Sent to {to} from {app.config['MAIL_FROM']} via {app.config['SMTP_HOST']}:{app.config['SMTP_PORT']}.")
+
     @app.cli.command("strava-subscribe")
     @click.argument("callback_url")
     def strava_subscribe(callback_url):

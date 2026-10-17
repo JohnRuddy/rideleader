@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Ride Leader Kit: plan the ride, lead the group{% endblock %}
+{% block head %}
+  <meta name="description" content="Check the route, the weather and the stops before you say see you Sunday, then give the whole group the same page. Built for cycling club ride leaders.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Ride Leader Kit: plan the ride, lead the group">
+  <meta property="og:description" content="Weather warnings, daylight, closures, café hours and defibrillators checked along your route. One page for the whole group.">
+  <meta property="og:image" content="{{ url_for('static', filename='landing/workbench.webp', _external=True) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='landing.css') }}">
+{% endblock %}
+{% block content %}
+<div class="landing">
+
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">For cycling club ride leaders</p>
+        <h1>Plan the ride.<br><em>Lead the group.</em></h1>
+        <p class="lede">Ride Leader Kit checks the route, the weather and the stops before you say &ldquo;see you Sunday&rdquo;, then gives everyone the same page. Nobody asks where the café is. Nobody gets left behind.</p>
+        <div class="cta-row">
+          <a class="btn btn-lg btn-yellow" href="{{ url_for('auth.login', next='/') }}">Plan a ride</a>
+          <a class="btn btn-lg btn-ghost" href="#checks">See what it checks</a>
+        </div>
+        <p class="fine muted">No password and nothing to install. We email you a sign-in link.</p>
+      </div>
+      <figure class="shot" aria-label="The Ride Leader Kit planning screen showing a route, the weather and a readiness check">
+        <div class="shot-bar" aria-hidden="true"><i></i><i></i><i></i><span>rideleader.cyclingtools.cc</span></div>
+        <img src="{{ url_for('static', filename='landing/workbench.webp') }}" width="1102" height="908" alt="A 22 km Sunday spin on the map with its elevation profile, a Ready to ride card flagging an ice risk at 9:30, and a five-day forecast.">
+      </figure>
+    </div>
+  </section>
+
+  <section class="strip" aria-label="The leader's Friday night problem">
+    <div class="wrap strip-grid">
+      <p class="strip-q">&ldquo;Is it still on? Where do we stop? Is the café even open?&rdquo;</p>
+      <p class="strip-a">That is a lot to hold in your head and a WhatsApp thread. Ride Leader Kit answers it from the route itself, and tells you plainly when it can&rsquo;t.</p>
+    </div>
+  </section>
+
+  <section class="sec" id="checks">
+    <div class="wrap">
+      <p class="eyebrow">What it checks along your route</p>
+      <h2>The things a good leader checks, <em>done before you leave the house.</em></h2>
+      <ul class="facts">
+        <li><b>Weather warnings</b><span>Met &Eacute;ireann warnings for the counties you ride through, shown as issued, plus the forecast hour by hour at each point on the route.</span></li>
+        <li><b>Daylight</b><span>Sunset against your pace group&rsquo;s finish time, so a late start in October doesn&rsquo;t become a ride home in the dark.</span></li>
+        <li><b>Closures and roadworks</b><span>Roads marked closed or private along the line, counted only where the route really runs along them.</span></li>
+        <li><b>Caf&eacute; hours against your ETA</b><span>Open, closed or unknown at the time each group arrives. About one caf&eacute; in four has hours on the map; the rest say <i>Unknown</i>. We never guess.</span></li>
+        <li><b>Defibrillators and services</b><span>The nearest defibrillator in every 10 km, plus caf&eacute;s, water and bike shops, ready to tick for the ride sheet.</span></li>
+        <li><b>Climbs and regroups</b><span>Every real climb with its gradient, and suggested regroup points at the top, so the slower group is never chasing.</span></li>
+      </ul>
+      <p class="honest"><strong>It prompts. You decide.</strong> Ride Leader Kit helps you do the checks leaders are taught. It doesn&rsquo;t replace a recce or your own risk assessment, and it never says a ride is &ldquo;safe&rdquo;.</p>
+    </div>
+  </section>
+
+  <section class="sec sec-dark" id="group">
+    <div class="wrap two">
+      <div>
+        <p class="eyebrow">One page for the whole group</p>
+        <h2>Everyone on <em>the same page.</em><br>Literally.</h2>
+        <p>The ride sheet is a light page that opens on any phone, no app and no account. The WhatsApp text and the A5 cue card come from the same plan, so what you say and what you hand out always match.</p>
+        <ul class="ticks">
+          <li>Start time, meeting point and your phone number</li>
+          <li>Pace groups with estimated arrival at each stop</li>
+          <li>Where the defibrillators and caf&eacute;s are</li>
+          <li>Weather and warnings as of this morning</li>
+        </ul>
+      </div>
+      <div class="sheet" aria-label="A ride sheet with a note from the leader">
+        <div class="sheet-head"><span class="eyebrow">Sunday 18 October &middot; 09:30</span><strong>Naas to Kilcullen</strong><span class="muted">22.5 km &middot; Naas Harbour</span></div>
+        <div class="sheet-note"><span class="eyebrow">A word from the leader</span>
+          <p>Mudguards on, please, it&rsquo;ll be wet underfoot. We regroup at every stop and nobody gets left behind.</p></div>
+        <div class="sheet-rows">
+          <div><b>A</b><span>28 km/h</span><em>Kilcullen 10:14</em></div>
+          <div><b>B</b><span>24 km/h</span><em>Kilcullen 10:21</em></div>
+          <div><b>C</b><span>20 km/h</span><em>Kilcullen 10:32</em></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="how">
+    <div class="wrap">
+      <p class="eyebrow">From route to ride sheet</p>
+      <h2>Three steps, <em>about as long as a coffee.</em></h2>
+      <ol class="steps">
+        <li><span class="n">1</span><b>Bring a route</b><p>Drop in a GPX file, or pull a route straight from Strava. Fix it on the map if you want to, and add your own cues with a right-click.</p></li>
+        <li><span class="n">2</span><b>Check it</b><p>The Ready to ride card lists what needs a look and what is fine. Anything it can&rsquo;t know is marked unknown, never green.</p></li>
+        <li><span class="n">3</span><b>Share it</b><p>Send the link, paste the WhatsApp text, print the cue card, or send the finished route back to your head unit.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="sec sec-tint" id="fits">
+    <div class="wrap two">
+      <div>
+        <p class="eyebrow">Works with what you already use</p>
+        <h2>Your club platform stays. <em>This is the planning step.</em></h2>
+        <p>Ride Leader Kit doesn&rsquo;t manage members or take bookings. Plan the ride here, then publish it wherever your club does. For Cyql there is a ready-made panel that copies each field of the ride form, with the GPX and the description.</p>
+      </div>
+      <ul class="chips" aria-label="Compatible with">
+        <li>Strava routes</li><li>GPX files</li><li>Garmin</li><li>Wahoo</li><li>Hammerhead Karoo</li><li>Cyql</li><li>WhatsApp</li><li>Printed cue cards</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="sec" id="trust">
+    <div class="wrap">
+      <p class="eyebrow">Private by default</p>
+      <h2>Your routes are <em>yours.</em></h2>
+      <div class="trio">
+        <div><b>You choose who sees a ride</b><p>Nothing is public until you share its link. Strava routes are only ever shown to the person who owns them.</p></div>
+        <div><b>Delete it all in one click</b><p>Remove your account and every route and ride with it, from the account page. We email you a confirmation.</p></div>
+        <div><b>No ads, no tracking of riders</b><p>The ride sheet loads no scripts at all. The map data is OpenStreetMap, the warnings are Met &Eacute;ireann&rsquo;s.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec sec-faq" id="faq">
+    <div class="wrap narrow-wrap">
+      <p class="eyebrow">Questions leaders ask</p>
+      <h2>Straight answers.</h2>
+      <details><summary>Does it replace my risk assessment or the recce?</summary><p>No. It makes the checks quicker and harder to forget, and the leader still decides. It will not tell you a ride is safe.</p></details>
+      <details><summary>Does it work outside Ireland?</summary><p>The routing, stops, daylight and forecast work anywhere OpenStreetMap does. The official weather warnings come from Met &Eacute;ireann, so they cover Ireland only.</p></details>
+      <details><summary>Does my club need to switch from Cyql or WhatsApp?</summary><p>No. Plan here, then post the plan wherever your club already talks.</p></details>
+      <details><summary>What if the data is wrong?</summary><p>Map data is crowd-sourced, so sometimes it is. A closure can be stale and a caf&eacute; may have changed its hours. That is why unknowns are marked and why the route is checked against the map you can see.</p></details>
+      <details><summary>What does it cost?</summary><p>It is free while we pilot it with clubs.</p></details>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <h2>Before you say <em>&ldquo;see you Sunday&rdquo;.</em></h2>
+      <a class="btn btn-lg btn-yellow" href="{{ url_for('auth.login', next='/') }}">Plan a ride</a>
+      <p class="fine">Questions? <a href="{{ url_for('account.privacy') }}">Read how we handle your data</a>.</p>
+    </div>
+  </section>
+
+</div>
+{% endblock %}

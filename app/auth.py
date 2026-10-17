@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, abort, current_app, g, redirect, render_template, request, session, url_for
 
 from . import db, ratelimit
-from .mailer import get_mailer
+from .mailer import MailError, get_mailer, mail_is_real
 from .models import LoginToken, User
 
 bp = Blueprint("auth", __name__)
@@ -63,14 +63,23 @@ def login_request():
         ratelimit.allow("login-email", hashlib.sha256(email.encode()).hexdigest(), 5, 900)
     if not ident_ok:
         return render_template("login.html", error="Too many sign-in requests. Wait a few minutes and try again.", next=nxt), 429
+    if current_app.config.get("RLK_ENV") == "production" and not mail_is_real():
+        current_app.logger.error("Sign-in requested but SMTP_HOST is not set; no email can be sent")
+        return render_template("login.html", error="Sign-in email isn't set up on this server yet. Please tell the site owner.",
+                               next=nxt), 503
     token = secrets.token_urlsafe(32)
     db.session.add(LoginToken(email=email, token_hash=_hash(token), expires_at=datetime.now(timezone.utc) + TOKEN_TTL))
     db.session.commit()
     base = (current_app.config["APP_BASE_URL"] or request.url_root).rstrip("/")
     link = f"{base}{url_for('auth.verify', token=token)}" + (f"?next={nxt}" if nxt else "")
-    get_mailer().send(email, "Your Ride Leader Kit sign-in link",
-                      f"Open this link to sign in (it works once and expires in 15 minutes):\n\n{link}\n\n"
-                      "If you didn't ask for this, ignore this email.")
+    try:
+        get_mailer().send(email, "Your Ride Leader Kit sign-in link",
+                          f"Open this link to sign in (it works once and expires in 15 minutes):\n\n{link}\n\n"
+                          "If you didn't ask for this, ignore this email.")
+    except MailError:
+        current_app.logger.error("Sign-in email to a user could not be sent")
+        return render_template("login.html", error="We couldn't send the email just now. Please try again in a minute.",
+                               next=nxt), 503
     # the same page whether or not the address is known: no account enumeration
     # Development convenience only. In production the link goes by email and nowhere else: showing it on the page
     # would let anyone sign in as any address they type.

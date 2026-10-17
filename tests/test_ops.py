@@ -37,3 +37,34 @@ def test_login_link_command_prints_a_working_one_time_link_and_the_first_person_
     assert User.query.filter_by(email="boss@example.com").one().role == "admin"
     assert client.post(path).status_code == 400   # one time only
     assert runner.invoke(args=["login-link", "not-an-email"]).exit_code != 0
+
+
+def test_signed_out_visitors_see_the_product_page_in_production_and_the_app_in_development(client):
+    cfg = client.application.config
+    cfg["RLK_ENV"] = "dev"
+    assert b"Drop a GPX file here" in client.get("/").data
+    cfg["RLK_ENV"] = "production"
+    page = client.get("/").data.decode()
+    assert "Plan the ride." in page and "Drop a GPX file here" not in page
+    assert 'href="/login?next=/"' in page or "/login?next=%2F" in page
+    assert client.get("/welcome").status_code == 200
+
+
+def test_signed_in_leaders_still_land_on_their_routes_in_production(client):
+    from app import db
+    from app.models import User
+    from tests.test_auth_security import sign_in
+    cfg = client.application.config
+    cfg["RLK_ENV"] = "production"
+    u = User(email="lead@example.com")
+    db.session.add(u)
+    db.session.commit()
+    sign_in(client, u)
+    assert b"Drop a GPX file here" in client.get("/").data
+
+
+def test_anonymous_uploads_are_refused_in_production(client):
+    import io
+    client.application.config["RLK_ENV"] = "production"
+    r = client.post("/routes/upload", data={"gpx": (io.BytesIO(b"<gpx/>"), "a.gpx")}, content_type="multipart/form-data")
+    assert r.status_code == 302 and "/login" in r.headers["Location"]
