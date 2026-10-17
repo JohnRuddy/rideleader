@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_art.html" import art %}
 {% block title %}{{ route.title }} · Ride Leader Kit{% endblock %}
 {% block head %}
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
@@ -186,6 +187,7 @@
           <span>Show this route to members of <strong>{{ current_club.name }}</strong></span></label>
         {% endif %}
         <p class="muted small">Anyone with the link can see the plan, with no sign-in, and you can pass it on freely. The warnings and weather on it are always current. A route from Strava is never shown as it is: sharing makes your own copy, with your stops, cues and notes.</p>
+        {{ art('share-the-plan', '', '200px', cls='share-art') }}
         <div id="share-state" class="small"></div>
         <p class="actions">
           <button type="button" class="btn small" id="share-create" hidden>Create a share link</button>

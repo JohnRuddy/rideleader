@@ -142,3 +142,64 @@ main:has(> .landing) { max-width: none; padding: 0; display: block; margin-top: 
 .landing .sec-dark .sheet .eyebrow { color: var(--muted); }
 .landing .sec-dark .sheet-note .eyebrow { color: var(--warn); }
 .landing .final .eyebrow { color: var(--ink); }
+
+/* the wrapper rule above is more specific than .strip-grid, which left the band with no vertical padding */
+.landing .strip-grid { padding-top: 40px; padding-bottom: 52px; }
+.landing .final > .wrap { padding-top: 0; padding-bottom: 0; }
+
+
+/* ---------- premium layer: icons, trust, motion ---------- */
+.ico { display: grid; place-items: center; width: 50px; height: 50px; border-radius: 50%; background: var(--yellow); color: #101418; border: 2px solid #101418; margin: 0 0 14px; box-shadow: 0 3px 0 #101418; }
+.ico svg { width: 26px; height: 26px; }
+.facts li::before { display: none; }
+.facts li { transition: transform .2s ease, box-shadow .2s ease; }
+.facts li:hover { transform: translateY(-3px); box-shadow: 0 10px 26px -14px rgba(16, 20, 24, .4); }
+.pillars { display: grid; gap: 16px; margin-top: 30px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); }
+.pillars > div { background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r); padding: 22px; box-shadow: var(--shadow); }
+.pillars b { display: block; font: 800 1.25rem/1.15 var(--display); margin-bottom: 8px; }
+.pillars p { margin: 0; color: var(--muted); }
+.sources { list-style: none; margin: 22px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.sources li { padding: 10px 16px; border: 2px solid var(--line-strong); border-radius: 999px; background: var(--surface); font-weight: 600; }
+.sources b { font: 800 .8rem var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--green); margin-right: 6px; }
+@media (prefers-color-scheme: dark) { .sources b { color: var(--yellow); } }
+
+/* the route line draws itself along the foot of the hero; km plates pop in along it */
+.hero { overflow: hidden; background-image: none !important; }
+.hero > .wrap { position: relative; z-index: 1; }
+.routeline { position: absolute; left: 0; right: 0; bottom: 0; height: 78%; z-index: 0; pointer-events: none; }
+.routeline svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+.rl-ghost, .rl-draw { fill: none; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.rl-ghost { stroke: var(--route); stroke-opacity: .2; stroke-width: 6px; stroke-dasharray: 1 16; }
+.rl-draw { stroke: var(--route); stroke-opacity: .6; stroke-width: 5px; stroke-dasharray: 4000; stroke-dashoffset: 4000; animation: rl-draw 3.4s cubic-bezier(.5, .1, .2, 1) .3s forwards; }
+.rl-plate { position: absolute; transform: translate(-50%, -135%) scale(.4); opacity: 0; padding: 3px 12px 2px; background: #fff; color: #101418; border: 2px solid #101418; border-top: 7px solid var(--green);
+  border-radius: 4px 4px 6px 6px; font: 800 1.1rem/1.1 var(--display); letter-spacing: .03em; animation: rl-pop .5s cubic-bezier(.2, 1.4, .4, 1) var(--d) forwards; }
+@keyframes rl-draw { to { stroke-dashoffset: 0; } }
+@keyframes rl-pop { to { opacity: 1; transform: translate(-50%, -135%) scale(1); } }
+@media (max-width: 720px) { .routeline { height: 40%; } .rl-plate { font-size: .95rem; } }
+
+/* sections arrive as you scroll to them (the page works the same without this) */
+.js .reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease var(--d, 0ms), transform .7s cubic-bezier(.2, .7, .2, 1) var(--d, 0ms); }
+.js .reveal.in { opacity: 1; transform: none; }
+
+/* the headline highlight sweeps in */
+.landing h1 em { background-size: 0% 100%; background-repeat: no-repeat; animation: em-sweep .9s ease .5s forwards; background-image: linear-gradient(transparent 62%, var(--yellow) 62%, var(--yellow) 92%, transparent 92%); background-color: transparent; }
+@keyframes em-sweep { to { background-size: 100% 100%; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .rl-draw { stroke-dashoffset: 0; } .rl-plate { opacity: 1; transform: translate(-50%, -135%); } .landing h1 em { background-size: 100% 100%; } .js .reveal { opacity: 1; transform: none; }
+}
+
+
+/* ---------- illustrations on the product page ---------- */
+.checks-intro { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px 32px; margin-bottom: 8px; }
+.checks-intro .art-plate { flex: 0 0 auto; width: min(300px, 100%); transform: rotate(-1.2deg); }
+.step-art { margin: 6px 0 14px; }
+.step-art .art-plate { width: min(260px, 100%); }
+.step-art-empty { display: none; }
+@media (min-width: 900px) { .step-art { min-height: 188px; } .step-art-empty { display: block; } }
+.final .art-plate { width: min(540px, 92%); margin: 0 auto 26px; transform: rotate(-.8deg); }
+@media (max-width: 720px) {
+  .checks-intro .art-plate { width: 200px; transform: none; }
+  .step-art .art-plate { width: 180px; }
+  .final .art-plate { width: 280px; }
+}

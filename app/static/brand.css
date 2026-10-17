@@ -230,3 +230,90 @@ summary { min-height: 44px; display: flex; align-items: center; }
 @media print { .callbtn { background: none; color: #000; border: 0; box-shadow: none; padding: 0; } }
 .name-form { max-width: 420px; margin: 12px 0; }
 .note-ok { padding: 10px 14px; border-left: 4px solid var(--ok); background: var(--ok-bg); border-radius: 0 var(--r-sm) var(--r-sm) 0; margin: 12px 0 0; }
+
+/* ---------- the road scene ---------- */
+:root {
+  --sc-sky-a: #f7f4ea; --sc-sky-b: #ffe8a6; --sc-h1: #d4e9dc; --sc-h2: #a9d4ba; --sc-h3: #5aa27c; --sc-h4: #0b5d3b; --sc-tree: #0b5d3b;
+  --sc-road: #2b3138; --sc-sun: #ffd60a;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --sc-sky-a: #0c1613; --sc-sky-b: #2b3a1f; --sc-h1: #173326; --sc-h2: #1b4a35; --sc-h3: #14603f; --sc-h4: #093a26; --sc-tree: #072c1d; --sc-road: #12161a; --sc-sun: #ffd60a; }
+}
+.scene { position: relative; overflow: hidden; height: clamp(190px, 26vw, 310px); background: var(--sc-sky-b); }
+.scene-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.scene-compact { height: clamp(120px, 20vw, 190px); border-radius: var(--r); margin-bottom: 16px; }
+.sc-sky-a { stop-color: var(--sc-sky-a); } .sc-sky-b { stop-color: var(--sc-sky-b); }
+.sc-hill { stroke: none; }
+.sc-h1 { fill: var(--sc-h1); } .sc-h2 { fill: var(--sc-h2); } .sc-h3 { fill: var(--sc-h3); } .sc-h4 { fill: var(--sc-h4); }
+.sc-trees circle { fill: var(--sc-tree); opacity: .8; }
+.sc-sun-core { fill: var(--sc-sun); } .sc-sun-halo { fill: var(--sc-sun); opacity: .28; transform-box: fill-box; transform-origin: center; animation: sc-halo 7s ease-in-out infinite; }
+.sc-road-edge { fill: none; stroke: #fff; stroke-width: 66; opacity: .92; }
+.sc-road { fill: none; stroke: var(--sc-road); stroke-width: 58; }
+.sc-road-dash { fill: none; stroke: #fff; stroke-width: 3.2; stroke-dasharray: 26 20; animation: sc-dash 1.5s linear infinite; }
+.sc-pole { fill: #6a727b; }
+.sc-plate { fill: var(--green-deep); stroke: #fff; stroke-width: 3; }
+.sc-plate-text { font: 800 26px var(--display); fill: #fff; letter-spacing: .05em; }
+.sc-plate2 { fill: #fff; stroke: #101418; stroke-width: 2.5; }
+.sc-plate2-text { font: 800 20px var(--display); fill: #101418; letter-spacing: .05em; }
+.sc-tyre { fill: none; stroke: #101418; stroke-width: 2.8; }
+.sc-spoke { fill: none; stroke: #101418; stroke-width: .9; opacity: .45; }
+.sc-frame { fill: none; stroke: #101418; stroke-width: 2.3; stroke-linejoin: round; stroke-linecap: round; }
+.sc-saddle { fill: none; stroke: #101418; stroke-width: 3; stroke-linecap: round; }
+.sc-leg { fill: none; stroke: #101418; stroke-width: 4.4; stroke-linecap: round; stroke-linejoin: round; }
+.sc-leg-back { fill: none; stroke: #101418; stroke-width: 3.8; stroke-linecap: round; stroke-linejoin: round; opacity: .55; }
+.sc-torso { fill: none; stroke: var(--jersey); stroke-width: 8.5; stroke-linecap: round; }
+.sc-arm { fill: none; stroke: var(--jersey); stroke-width: 3.6; stroke-linecap: round; }
+.sc-head { fill: #f0c8a4; }
+.sc-helmet { fill: var(--jersey); stroke: #101418; stroke-width: 1; }
+.sc-peloton use { filter: drop-shadow(0 0 .7px rgba(16, 20, 24, .85)); }
+.sc-peloton { animation: sc-ride 52s linear infinite; }
+.sc-chase { animation-duration: 70s; animation-delay: -40s; }
+.sc-wheel { transform-box: fill-box; transform-origin: center; animation: sc-spin .85s linear infinite; }
+@keyframes sc-ride { from { transform: translateX(-340px); } to { transform: translateX(1520px); } }
+@keyframes sc-spin { to { transform: rotate(360deg); } }
+@keyframes sc-dash { to { stroke-dashoffset: -46; } }
+@keyframes sc-halo { 50% { transform: scale(1.12); opacity: .4; } }
+@media (prefers-reduced-motion: reduce) {
+  .sc-peloton, .sc-wheel, .sc-road-dash, .sc-sun-halo { animation: none; }
+  .sc-peloton { transform: translateX(520px); }
+  .sc-chase { transform: translateX(860px); }
+}
+
+/* small touches across the app */
+.btn { transition: transform .12s ease, box-shadow .12s ease, background .15s ease; }
+.btn:hover { transform: translateY(-1px); box-shadow: 0 4px 0 var(--ink); }
+.btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.chip { transition: border-color .15s, background .15s, transform .12s; }
+.chip:active { transform: scale(.97); }
+.upnext { transition: transform .18s ease, box-shadow .18s ease; }
+.upnext:hover { transform: translateY(-2px) rotate(-.3deg); box-shadow: 0 12px 28px -14px rgba(16, 20, 24, .45); }
+.roundel { transition: transform .25s cubic-bezier(.3, 1.5, .5, 1); }
+.groupline:hover .roundel, .sheet-rows > div:hover .roundel { transform: rotate(-10deg) scale(1.08); }
+.club-row { transition: background .15s; }
+.club-row:hover { background: var(--raised); }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.rd-list > * { animation: rise .45s ease both; }
+.rd-list > *:nth-child(2) { animation-delay: .06s; } .rd-list > *:nth-child(3) { animation-delay: .12s; } .rd-list > *:nth-child(4) { animation-delay: .18s; }
+.rd-list > *:nth-child(5) { animation-delay: .24s; } .rd-list > *:nth-child(6) { animation-delay: .3s; } .rd-list > *:nth-child(7) { animation-delay: .36s; } .rd-list > *:nth-child(8) { animation-delay: .42s; }
+.next-step, .welcome, .guide section { animation: rise .45s ease both; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+.scene-compact { height: clamp(150px, 30vw, 190px); }
+@media (max-width: 720px) { .scene-compact { height: 172px; } }
+
+
+/* ---------- the pen illustrations: always on a cream plate ---------- */
+.art-plate { display: block; background: #f6f3ea; border: 2px solid #101418; border-radius: 22px; box-shadow: 0 4px 0 #101418; padding: 8px 10px; max-width: 100%; box-sizing: border-box; }
+.art-plate img { display: block; width: 100%; height: auto; object-fit: contain; }
+.art-plate[hidden] { display: none; }
+.guide section { display: flow-root; }
+.guide-art { float: right; width: 250px; margin: 0 0 14px 22px; }
+.art-inline { width: 220px; max-width: 100%; margin: 4px 0 12px; }
+.welcome { display: grid; gap: 18px; }
+.welcome-art .art-plate { width: min(300px, 100%); margin: 0 auto; transform: rotate(1.4deg); }
+@media (min-width: 760px) { .welcome { grid-template-columns: minmax(0, 1fr) minmax(220px, 300px); align-items: center; } }
+.share-art { width: min(200px, 100%); margin: 8px 0 12px; }
+@media (max-width: 720px) {
+  .guide-art { float: none; width: 180px; margin: 0 auto 14px; }
+  .art-inline { width: 170px; }
+}

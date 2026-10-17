@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_art.html" import art %}
 {% block content %}
 {% if next_ride %}
 <a class="upnext" href="{{ url_for('main.show', route_id=next_ride.id) }}">
@@ -13,6 +14,7 @@
 {% endif %}
 {% if current_user and not routes %}
 <section class="welcome" aria-labelledby="welcome-h">
+  <div class="welcome-copy">
   <p class="eyebrow">{{ 'Welcome to ' ~ current_club.name if current_club else 'Welcome' }}</p>
   <h2 id="welcome-h">Get your first ride ready</h2>
   <p>It takes about as long as a coffee, and everyone gets the same page on their phone.</p>
@@ -22,6 +24,8 @@
     <li><div><b>Share it</b><span>Send the link to the group chat. No app, no sign-in for riders.</span></div></li>
   </ol>
   <a class="btn alt" href="{{ url_for('guide.page') }}">See how it works</a>
+  </div>
+  <div class="welcome-art">{{ art('bring-a-route', '', '(max-width: 760px) 240px, 300px', lazy=false) }}</div>
 </section>
 {% endif %}
 <section class="card">

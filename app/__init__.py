@@ -89,11 +89,12 @@ def create_app(config: dict | None = None) -> Flask:
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     import mimetypes
     mimetypes.add_type("font/woff2", ".woff2")
+    mimetypes.add_type("image/webp", ".webp")
 
     @app.after_request
     def cache_fonts(resp):
-        # the font files never change under the same name: let browsers keep them for a year
-        if request.path.startswith("/static/fonts/"):
+        # the font and image files never change under the same name: let browsers keep them for a year
+        if request.path.startswith(("/static/fonts/", "/static/img/")):
             resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
         return resp
 

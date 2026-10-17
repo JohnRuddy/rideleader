@@ -310,3 +310,161 @@ def test_the_ride_sheet_has_a_big_call_button_for_the_leader(client):
     token = client.post(f"/api/routes/{rid}/share").get_json()["token"]
     html = other_client(client).get(f"/r/{token}").data.decode()
     assert 'class="btn small callbtn" href="tel:0871234567"' in html and "Call 087 123 4567" in html
+
+
+# ---------------- the premium layer: scene, icons, trust, motion ----------------
+
+def test_the_road_scene_is_decorative_self_contained_and_on_the_right_pages(client):
+    for path in ("/welcome", "/login"):
+        html = client.get(path).data.decode()
+        assert 'class="scene' in html and 'aria-hidden="true"' in html and "sc-rider" in html
+        assert html.count('class="scene-svg"') == 1
+    import pathlib
+    svg = (pathlib.Path(__file__).resolve().parent.parent / "app" / "templates" / "_scene.html").read_text(encoding="utf-8")
+    assert "http://" not in svg.replace("http://www.w3.org", "") and "https://" not in svg and "<image" not in svg   # drawn, nothing fetched
+    assert 'role="presentation"' in svg and 'focusable="false"' in svg
+
+
+def test_motion_stops_for_people_who_ask_for_less(client):
+    for sheet in ("brand.css", "landing.css"):
+        css = client.get(f"/static/{sheet}").data.decode()
+        assert "prefers-reduced-motion: reduce" in css, sheet
+    html = client.get("/welcome").data.decode()
+    assert "prefers-reduced-motion: reduce" in html                  # the reveal script checks it before hiding anything
+
+
+def test_the_product_page_has_icons_for_every_check_and_an_honest_trust_section(client):
+    html = client.get("/welcome").data.decode()
+    assert html.count('<i class="ico"') >= 10                         # six checks + four trust pillars
+    for needle in ("Why you can trust it", "No guesswork.", "Every figure has a source", "Unknown stays unknown", "You decide",
+                   "Your club, and only your club", "No ads, no analytics"):
+        assert needle in html, needle
+    assert "loads no scripts" not in html                             # the ride sheet does run small scripts: don't claim otherwise
+    for source in ("Met &Eacute;ireann", "OpenStreetMap", "Open-Meteo", "Strava"):
+        assert source in html
+
+
+def test_the_product_page_invents_no_numbers_or_testimonials(client):
+    html = client.get("/welcome").data.decode().lower()
+    for banned in ("testimonial", "trusted by", "clubs use", "5-star", "five star", "thousands of", "rated "):
+        assert banned not in html, banned
+
+
+def test_the_hero_route_line_draws_with_html_plates_not_stretched_text(client):
+    html = client.get("/welcome").data.decode()
+    assert html.count('class="rl-plate"') == 2 and 'class="rl-draw"' in html
+    assert "<text" not in html.split('class="routeline"')[1].split("</div>")[0]
+
+
+def test_the_page_reveals_only_after_its_script_has_run(client):
+    css = client.get("/static/landing.css").data.decode()
+    assert ".js .reveal" in css                                       # content is hidden only once the script has added .js
+    assert ".reveal {" not in css.replace(".js .reveal {", "")
+
+
+# ---------------- the pen illustrations ----------------
+
+ART = ("club-ride", "bring-a-route", "check-the-weather", "cafe-stop", "regroup", "share-the-plan")
+
+
+def _imgs(html):
+    return re.findall(r"<img\b[^>]*>", html)
+
+
+def test_every_illustration_is_shipped_small_and_with_both_sizes(client):
+    import pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent / "app" / "static" / "img"
+    for slug in ART:
+        for width, cap_kb in ((560, 120), (1120, 360)):
+            f = root / f"{slug}-{width}.webp"
+            assert f.exists(), f.name
+            assert f.stat().st_size < cap_kb * 1024, (f.name, f.stat().st_size)
+            assert f.read_bytes()[:4] == b"RIFF" and f.read_bytes()[8:12] == b"WEBP"
+    assert not list(root.glob("*.png"))                                  # the heavy masters stay out of the site
+    r = client.get("/static/img/club-ride-560.webp")
+    assert r.status_code == 200 and r.mimetype == "image/webp"
+
+
+def test_the_product_page_places_the_four_illustrations_where_the_guide_says(client):
+    html = client.get("/welcome").data.decode()
+    for slug in ("club-ride", "bring-a-route", "check-the-weather", "share-the-plan", "cafe-stop"):
+        assert f"img/{slug}-560.webp" in html, slug
+    assert "img/regroup-560.webp" not in html                              # that one lives in the guide
+    # closing call to action: the club ride sits above the heading, on a cream plate
+    final = html.split('<section class="final">')[1]
+    assert final.index("club-ride-560") < final.index("see you Sunday")
+    # the weather drawing introduces the checks, before the grid of six
+    checks = html.split('id="checks"')[1]
+    assert checks.index("check-the-weather-560") < checks.index('<ul class="facts">')
+    # the route drawing is above step 1, the share drawing above step 3
+    how = html.split('id="how"')[1]
+    assert how.index("bring-a-route-560") < how.index("Bring a route") and how.index("share-the-plan-560") < how.index("Share it")
+
+
+def test_the_guide_gets_the_route_stops_and_regroup_drawings(client):
+    html = client.get("/how-it-works").data.decode()
+    for slug in ("bring-a-route", "cafe-stop", "regroup"):
+        assert f"img/{slug}-560.webp" in html, slug
+    assert html.index("regroup-560") < html.index("Pace groups and arrival times") < html.index("average moving speed")
+
+
+def test_every_image_has_alt_dimensions_and_the_below_the_fold_ones_load_lazily(client):
+    for path in ("/welcome", "/how-it-works"):
+        imgs = [i for i in _imgs(client.get(path).data.decode()) if "/img/" in i]
+        assert imgs, path
+        for tag in imgs:
+            assert 'alt="' in tag and 'width="560"' in tag and 'height="373"' in tag and "srcset=" in tag and "sizes=" in tag, tag
+    # at the top of the guide the first drawing is eager; further down they are lazy
+    guide = [i for i in _imgs(client.get("/how-it-works").data.decode()) if "/img/" in i]
+    assert "loading=" not in guide[0] and all('loading="lazy"' in t for t in guide[1:])
+    page = [i for i in _imgs(client.get("/welcome").data.decode()) if "/img/" in i]
+    assert all('loading="lazy"' in t for t in page)
+
+
+def test_alt_text_describes_the_pictures_that_carry_meaning_and_is_empty_where_the_words_already_do(client):
+    page = client.get("/welcome").data.decode()
+    assert 'alt="Four helmeted club cyclists riding together on a country lane."' in page
+    assert 'alt="A bicycle beneath a sun, raincloud and wind symbols."' in page
+    steps = page.split('id="how"')[1].split("</section>")[0]
+    assert steps.count('alt=""') == 3                                       # the headings beside them already say it
+    guide = client.get("/how-it-works").data.decode()
+    assert 'alt="A hand traces a cycling route on a folded map beside a GPS device."' in guide
+    assert 'alt="Cyclists wait at a hilltop regroup point as another rider arrives."' in guide
+
+
+def test_a_new_member_with_no_routes_sees_the_route_drawing_and_an_unshared_ride_shows_the_share_drawing(client):
+    a = user("a@example.com")
+    member(a, Club.query.first().id)
+    sign_in(client, a)
+    home = client.get("/").data.decode()
+    assert "Get your first ride ready" in home and "bring-a-route-560" in home
+    upload(client)
+    assert "bring-a-route-560" not in client.get("/").data.decode()          # gone once there is a route
+    route = client.get(f"/routes/{Route.query.one().id}").data.decode()
+    assert "share-the-plan-560" in route and "share-art" in route
+
+
+def test_the_art_never_sits_on_the_dark_panels_or_in_forms(client):
+    css = client.get("/static/brand.css").data.decode()
+    assert "#f6f3ea" in css                                                  # the cream plate every drawing sits on
+    login = client.get("/login").data.decode()
+    assert "/img/" not in login                                              # sign-in stays free of decoration
+    page = client.get("/welcome").data.decode()
+    dark = page.split('id="group"')[1].split("</section>")[0]
+    assert "/img/" not in dark
+
+
+def test_the_privacy_page_does_not_show_setting_names_to_the_public(client):
+    client.application.config.update(CONTROLLER_NAME="", CONTROLLER_CONTACT="")
+    html = client.get("/privacy").data.decode()
+    assert "CONTROLLER_NAME" not in html and "ask your club admin" in html
+    boss = user("boss@example.com", "admin")
+    sign_in(client, boss)
+    assert "CONTROLLER_NAME" in client.get("/privacy").data.decode()          # the site admin does see how to fix it
+    client.application.config.update(CONTROLLER_NAME="Velo Club CLG", CONTROLLER_CONTACT="privacy@velo.example")
+    assert "Velo Club CLG. Contact: privacy@velo.example" in client.get("/privacy").data.decode()
+
+
+def test_images_are_kept_by_browsers_for_a_year(client):
+    r = client.get("/static/img/regroup-1120.webp")
+    assert r.status_code == 200 and "max-age=31536000" in r.headers["Cache-Control"]

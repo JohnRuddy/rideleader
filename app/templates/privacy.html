@@ -9,7 +9,8 @@
   {% if controller %}
     <p>{{ controller }}{% if contact %}. Contact: {{ contact }}{% endif %}.</p>
   {% else %}
-    <p class="warn">The club running this site has not yet filled in its name and contact details (settings <code>CONTROLLER_NAME</code> and <code>CONTROLLER_CONTACT</code>). This must be done before the site is used by members.</p>
+    <p>This site is run by the club that invited you. For anything about your information, ask your club admin.</p>
+    {% if is_platform_admin %}<p class="warn small">Site admin: the operator's name and contact are not set yet. Add <code>CONTROLLER_NAME</code> and <code>CONTROLLER_CONTACT</code> to the server settings so they show here. Visitors don't see this note.</p>{% endif %}
   {% endif %}
 
   <h2>What we hold</h2>

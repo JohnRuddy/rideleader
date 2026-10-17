@@ -1,0 +1,65 @@
+{# A drawn scene of a club run on an Irish back road. Decorative only: hidden from screen readers.
+   Colours come from CSS variables (--sc-*) so it follows light and dark mode; motion stops for people who ask for less. #}
+<svg class="scene-svg" viewBox="0 0 1440 420" preserveAspectRatio="xMidYMax slice" role="presentation" focusable="false" aria-hidden="true">
+  <defs>
+    <linearGradient id="sc-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" class="sc-sky-a"/><stop offset="1" class="sc-sky-b"/>
+    </linearGradient>
+    <symbol id="sc-rider" viewBox="0 0 72 46" overflow="visible">
+      <g class="sc-wheel"><circle cx="14" cy="32" r="11" class="sc-tyre"/><path d="M14 22v20M4 32h20M7 25l14 14M21 25L7 39" class="sc-spoke"/></g>
+      <g class="sc-wheel"><circle cx="58" cy="32" r="11" class="sc-tyre"/><path d="M58 22v20M48 32h20M51 25l14 14M65 25L51 39" class="sc-spoke"/></g>
+      <path d="M14 32H30L26 16L14 32M26 16L50 17L30 32M50 17L58 32" class="sc-frame"/>
+      <path d="M21 15h9M50 17l4-2" class="sc-saddle"/>
+      <path d="M28 15L31 28L26 33" class="sc-leg-back"/>
+      <path d="M27 14L38 23L31 32" class="sc-leg"/>
+      <path d="M27 13L41 8" class="sc-torso"/>
+      <path d="M41 9L53 15" class="sc-arm"/>
+      <circle cx="46" cy="5.4" r="4.2" class="sc-head"/>
+      <path d="M41.6 5.2a4.6 4.6 0 0 1 9 0z" class="sc-helmet"/>
+    </symbol>
+  </defs>
+
+  <rect width="1440" height="420" fill="url(#sc-sky)"/>
+  <g class="sc-sun"><circle cx="1130" cy="118" r="72" class="sc-sun-halo"/><circle cx="1130" cy="118" r="44" class="sc-sun-core"/></g>
+
+  <g class="sc-drift">
+    <path d="M-80 262C100 196 260 224 440 240S760 190 960 220S1240 196 1520 224V420H-80Z" class="sc-hill sc-h1"/>
+  </g>
+  <path d="M-40 296C140 250 320 276 540 268S900 236 1120 266S1360 250 1500 268V420H-40Z" class="sc-hill sc-h2"/>
+  <path d="M-40 336C200 298 380 326 600 318S980 292 1200 320S1380 310 1500 316V420H-40Z" class="sc-hill sc-h3"/>
+
+  <g class="sc-trees">
+    <circle cx="96" cy="318" r="15"/><circle cx="124" cy="322" r="11"/><circle cx="262" cy="326" r="13"/><circle cx="286" cy="329" r="9"/>
+    <circle cx="640" cy="318" r="12"/><circle cx="668" cy="320" r="16"/><circle cx="698" cy="324" r="10"/>
+    <circle cx="1010" cy="306" r="13"/><circle cx="1036" cy="309" r="10"/><circle cx="1330" cy="318" r="15"/><circle cx="1362" cy="322" r="11"/>
+  </g>
+  <path d="M-40 372C200 346 430 366 700 360S1160 340 1500 356V420H-40Z" class="sc-hill sc-h4"/>
+
+  <path d="M-60 398C240 378 430 396 700 390S1180 370 1520 388" class="sc-road-edge"/>
+  <path d="M-60 398C240 378 430 396 700 390S1180 370 1520 388" class="sc-road"/>
+  <path d="M-60 398C240 378 430 396 700 390S1180 370 1520 388" class="sc-road-dash"/>
+
+  <g class="sc-sign" transform="translate(1196 262)">
+    <rect x="-3" y="30" width="7" height="86" rx="2" class="sc-pole"/>
+    <rect x="-62" y="0" width="128" height="40" rx="5" class="sc-plate"/>
+    <text x="2" y="28" text-anchor="middle" class="sc-plate-text">NAAS 12</text>
+    <rect x="-38" y="48" width="86" height="30" rx="4" class="sc-plate2"/>
+    <text x="5" y="70" text-anchor="middle" class="sc-plate2-text">CAFÉ 9</text>
+  </g>
+
+  <g class="sc-peloton" aria-hidden="true">
+    <g transform="translate(0 322)">
+      <use href="#sc-rider" x="0" y="0" width="76" height="49" style="--jersey:#ffd60a"/>
+      <use href="#sc-rider" x="52" y="14" width="76" height="49" style="--jersey:#ffffff"/>
+      <use href="#sc-rider" x="102" y="0" width="76" height="49" style="--jersey:#d4141c"/>
+      <use href="#sc-rider" x="154" y="14" width="76" height="49" style="--jersey:#0b5d3b"/>
+      <use href="#sc-rider" x="206" y="0" width="76" height="49" style="--jersey:#101418"/>
+    </g>
+  </g>
+  <g class="sc-peloton sc-chase" aria-hidden="true">
+    <g transform="translate(0 340) scale(.78)">
+      <use href="#sc-rider" x="0" y="0" width="76" height="49" style="--jersey:#ffd60a"/>
+      <use href="#sc-rider" x="64" y="10" width="76" height="49" style="--jersey:#d4141c"/>
+    </g>
+  </g>
+</svg>

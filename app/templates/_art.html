@@ -1,0 +1,9 @@
+{# The six pen illustrations. Each sits on a cream plate, because the ink needs a light ground (on the yellow and green
+   panels it would vanish or look cut out). alt="" when the words beside it already say everything. Below the fold they
+   load lazily; width and height are set so the page doesn't jump. Two sizes: phones and normal screens get the small
+   one, sharp (2x) screens the large one. #}
+{% macro art(slug, alt="", sizes="260px", lazy=true, cls="") -%}
+<div class="art-plate {{ cls }}"><img src="{{ url_for('static', filename='img/' ~ slug ~ '-560.webp') }}"
+  srcset="{{ url_for('static', filename='img/' ~ slug ~ '-560.webp') }} 560w, {{ url_for('static', filename='img/' ~ slug ~ '-1120.webp') }} 1120w"
+  sizes="{{ sizes }}" width="560" height="373" alt="{{ alt }}"{% if lazy %} loading="lazy"{% endif %} decoding="async"></div>
+{%- endmacro %}

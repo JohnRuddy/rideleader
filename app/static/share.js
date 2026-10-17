@@ -4,7 +4,7 @@
   const base = box.dataset.base, canShare = box.dataset.can === 'yes', signedIn = box.dataset.signedIn === 'yes';
   const stateEl = document.getElementById('share-state'), msg = document.getElementById('share-msg');
   const create = document.getElementById('share-create'), copy = document.getElementById('share-copy'), stop = document.getElementById('share-stop');
-  const native = document.getElementById('share-native');
+  const native = document.getElementById('share-native'), art = box.querySelector('.share-art');
   let url = null;
   const api = async (method, body) => {
     const r = await fetch(`${base}/share`, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
@@ -28,6 +28,7 @@
     } else stateEl.textContent = signedIn ? 'Not shared yet.' : 'Sign in to share this ride.';
     create.hidden = s.shared || !signedIn; copy.hidden = stop.hidden = !s.shared;
     native.hidden = !(s.shared && navigator.share);
+    if (art) art.hidden = !!s.shared;                  // the drawing is for before there is a link
   }
   async function load() { try { render(await (await fetch(`${base}/share`)).json()); } catch (e) { stateEl.textContent = e.message; } }
 

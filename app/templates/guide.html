@@ -1,9 +1,11 @@
 {% extends "base.html" %}
+{% from "_art.html" import art %}
 {% block title %}How it works · Ride Leader Kit{% endblock %}
 {% block head %}<meta name="description" content="How Ride Leader Kit works: plan a club ride, check the weather, daylight, closures and stops, share one page with the group, and how clubs, invite codes and Strava fit in.">{% endblock %}
 {% block content %}
 <div class="guide">
   <section>
+    {{ art('bring-a-route', 'A hand traces a cycling route on a folded map beside a GPS device.', '(max-width: 720px) 180px, 250px', lazy=false, cls='guide-art') }}
     <p class="eyebrow">The guide</p>
     <h1>How Ride Leader Kit works</h1>
     <p class="lede">Ride Leader Kit helps a club ride leader get a ride ready and put the whole group on the same page. You bring a route, it checks what it can, you decide, and everyone gets the same plan on their phone.</p>
@@ -23,7 +25,7 @@
     <h2>A ride in four steps</h2>
     <ol class="flow">
       <li><div><b>Bring a route</b>Drop in a GPX file from Strava, Garmin, Komoot or anywhere else, or pull a route straight from your Strava. To change the line, press <em>Edit route</em>: drag it, add a point to pass through, and it follows the roads. Press <em>Add cue</em> on the map to put in your own warnings and notes, such as &ldquo;sharp left, gravel&rdquo;.</div></li>
-      <li><div><b>Find stops</b>On the <em>Stops</em> tab, <em>Find stops along route</em> looks in OpenStreetMap beside your route for cafés, water, defibrillators, bike shops and historic sites, and adds your club&rsquo;s own saved stops. Tick the ones you want on the ride sheet and mark the one the group will actually stop at.</div></li>
+      <li><div><b>Find stops</b>On the <em>Stops</em> tab, <em>Find stops along route</em> looks in OpenStreetMap beside your route for cafés, water, defibrillators, bike shops and historic sites, and adds your club&rsquo;s own saved stops. Tick the ones you want on the ride sheet and mark the one the group will actually stop at.{{ art('cafe-stop', 'Bicycles outside a village café with cups and a wall clock.', '(max-width: 720px) 170px, 220px', cls='art-inline') }}</div></li>
       <li><div><b>Check it</b>The <em>Ready to ride?</em> card on the <em>Checks</em> tab lists what needs a look and what is fine: warnings, forecast, daylight, closures, café hours and defibrillators. Pick the day and start time on the same tab and the checks update.</div></li>
       <li><div><b>Share it</b>On the <em>Share</em> tab, make a link, copy the WhatsApp message, print the cue card or add the ride to a calendar. Add <em>a word from the leader</em> first: &ldquo;mudguards on, nobody gets left behind&rdquo;.</div></li>
     </ol>
@@ -49,6 +51,7 @@
   </section>
 
   <section id="pace">
+    {{ art('regroup', 'Cyclists wait at a hilltop regroup point as another rider arrives.', '(max-width: 720px) 180px, 250px', cls='guide-art') }}
     <h2>Pace groups and arrival times</h2>
     <p>Each group has an <b>average moving speed</b> and a <b>stop time</b>. The time a group reaches any point is the distance divided by its speed, plus the stop time for every planned stop it has already passed. &ldquo;Back about&rdquo; is the same sum for the finish.</p>
     <p>The starting groups are A at 28 km/h, B at 24 km/h and C at 20 km/h, each stopping 20 minutes. Change them in <em>Ride plan</em>. The estimate does not adjust for hills or wind, so use the speed that group really averages on a ride like this one.</p>
