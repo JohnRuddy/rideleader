@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}How it works · Ride Leader Kit{% endblock %}
+{% block head %}<meta name="description" content="How Ride Leader Kit works: plan a club ride, check the weather, daylight, closures and stops, share one page with the group, and how clubs, invite codes and Strava fit in.">{% endblock %}
+{% block content %}
+<div class="guide">
+  <section>
+    <p class="eyebrow">The guide</p>
+    <h1>How Ride Leader Kit works</h1>
+    <p class="lede">Ride Leader Kit helps a club ride leader get a ride ready and put the whole group on the same page. You bring a route, it checks what it can, you decide, and everyone gets the same plan on their phone.</p>
+    <ul class="toc" aria-label="On this page">
+      <li><a href="#steps">A ride in four steps</a></li>
+      <li><a href="#checks">What the checks mean</a></li>
+      <li><a href="#pace">Pace groups and times</a></li>
+      <li><a href="#share">Sharing</a></li>
+      <li><a href="#clubs">Clubs and invite codes</a></li>
+      <li><a href="#strava">Strava</a></li>
+      <li><a href="#data">Data and limits</a></li>
+      <li><a href="#words">Glossary</a></li>
+    </ul>
+  </section>
+
+  <section id="steps">
+    <h2>A ride in four steps</h2>
+    <ol class="flow">
+      <li><div><b>Bring a route</b>Drop in a GPX file from Strava, Garmin, Komoot or anywhere else, or pull a route straight from your Strava. To change the line, press <em>Edit route</em>: drag it, add a point to pass through, and it follows the roads. Press <em>Add cue</em> on the map to put in your own warnings and notes, such as &ldquo;sharp left, gravel&rdquo;.</div></li>
+      <li><div><b>Find stops</b>On the <em>Stops</em> tab, <em>Find stops along route</em> looks in OpenStreetMap beside your route for cafés, water, defibrillators, bike shops and historic sites, and adds your club&rsquo;s own saved stops. Tick the ones you want on the ride sheet and mark the one the group will actually stop at.</div></li>
+      <li><div><b>Check it</b>The <em>Ready to ride?</em> card on the <em>Checks</em> tab lists what needs a look and what is fine: warnings, forecast, daylight, closures, café hours and defibrillators. Pick the day and start time on the same tab and the checks update.</div></li>
+      <li><div><b>Share it</b>On the <em>Share</em> tab, make a link, copy the WhatsApp message, print the cue card or add the ride to a calendar. Add <em>a word from the leader</em> first: &ldquo;mudguards on, nobody gets left behind&rdquo;.</div></li>
+    </ol>
+    <p class="note"><strong>It prompts, you decide.</strong> Ride Leader Kit helps you do the checks leaders are taught. It doesn&rsquo;t replace a recce or your own risk assessment, and it never calls a ride &ldquo;safe&rdquo;.</p>
+  </section>
+
+  <section id="checks">
+    <h2>What the checks mean</h2>
+    <p>Each check shows <b>OK</b>, <b>Check</b> or <b>Unknown</b>. Unknown is never shown as fine: if a source can&rsquo;t be reached or has nothing to say, you are told.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Check</th><th>What it does</th><th>What it can&rsquo;t tell you</th></tr></thead>
+      <tbody>
+        <tr><td><b>Weather warnings</b></td><td>Shows Met &Eacute;ireann warnings for the counties you ride through that overlap the ride, exactly as issued.</td><td>Ireland only. It never cancels a ride: that call is yours.</td></tr>
+        <tr><td><b>Forecast</b></td><td>Hourly forecast at points along the route for your start time. Flags gusts over {{ '%g' % defaults.gust_kmh }} km/h, temperatures at or below {{ '%g' % defaults.ice_c }}&deg;C (ice) and heavy rain over {{ '%g' % defaults.heavy_rain_mm_h }} mm an hour. Your club can change these limits.</td><td>A forecast is a forecast. The flags are advice, not official warnings.</td></tr>
+        <tr><td><b>Daylight</b></td><td>Compares sunrise and sunset with when each pace group finishes, and says when lights are needed ({{ defaults.lights_min_before_sunset }} minutes before sunset by default).</td><td>It can&rsquo;t know about tunnels, woods or fog beyond the forecast.</td></tr>
+        <tr><td><b>Closures and roadworks</b></td><td>Counts closures your club has entered, plus roadworks and no-access roads mapped in OpenStreetMap that your route really runs along. Footpaths and steps are ignored.</td><td>Only what someone has entered or mapped. A new closure nobody has reported won&rsquo;t show.</td></tr>
+        <tr><td><b>Caf&eacute; hours</b></td><td>Compares a caf&eacute;&rsquo;s opening hours with when each group arrives: open, closed or unknown.</td><td>Many caf&eacute;s have no hours on the map and show <em>Unknown</em>. We never guess. Your club can save confirmed hours.</td></tr>
+        <tr><td><b>Defibrillators</b></td><td>Lists the nearest defibrillator in every 10 km, whether or not you tick it, because it is safety information.</td><td>Whether it is unlocked, working or in reach at 3 a.m.</td></tr>
+        <tr><td><b>Climbs and regroups</b></td><td>Finds real climbs with their gradients and suggests regroup points at the top, so the slower group is never chasing.</td><td>You choose whether to regroup or ease off on each climb.</td></tr>
+        <tr><td><b>Road types</b></td><td>Shows how much of the ride is main road, local road and unpaved.</td><td>Roads not mapped in OpenStreetMap show as &ldquo;not mapped&rdquo;.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="pace">
+    <h2>Pace groups and arrival times</h2>
+    <p>Each group has an <b>average moving speed</b> and a <b>stop time</b>. The time a group reaches any point is the distance divided by its speed, plus the stop time for every planned stop it has already passed. &ldquo;Back about&rdquo; is the same sum for the finish.</p>
+    <p>The starting groups are A at 28 km/h, B at 24 km/h and C at 20 km/h, each stopping 20 minutes. Change them in <em>Ride plan</em>. The estimate does not adjust for hills or wind, so use the speed that group really averages on a ride like this one.</p>
+  </section>
+
+  <section id="share">
+    <h2>Sharing</h2>
+    <dl>
+      <div><dt>The ride sheet link</dt><dd>One page for the whole group. Anyone who has the link can open it, with no sign-in and nothing to install, and you can pass it on freely. It shows the plan, warnings and weather as they are when it is opened, and keeps the last copy for when there is no signal. You can switch the link off at any time and it stops working for everyone.</dd></div>
+      <div><dt>WhatsApp message</dt><dd>One tap copies a short summary and the link, ready to paste into the group.</dd></div>
+      <div><dt>Cue card</dt><dd>A printable A5 card with the key times, stops and your note. Also on the ride sheet.</dd></div>
+      <div><dt>Add to calendar</dt><dd>The ride sheet has an <em>Add to calendar</em> link, so riders get the day, time and meeting point in their own calendar.</dd></div>
+      <div><dt>Your club</dt><dd>Your routes are shown to the other members of your club unless you switch <em>Show this route to members of your club</em> off on the Share tab. Nobody outside your club sees them.</dd></div>
+    </dl>
+  </section>
+
+  <section id="clubs">
+    <h2>Clubs and invite codes</h2>
+    <p>Ride Leader Kit is run club by club. Everyone belongs to at least one club, and a club shares its routes, trusted stops, closures and settings among its own members only.</p>
+    <dl>
+      <div><dt>Joining</dt><dd>Ask a club admin for an <b>invite code</b>. Enter it with your email the first time you sign in, and we email you a link. After that you only need your email. There are no passwords.</dd></div>
+      <div><dt>Members</dt><dd>Plan rides, save stops, enter closures and share with the club.</dd></div>
+      <div><dt>Club admins</dt><dd>Everything members do, plus making invite codes (shown once, with an expiry and optional limits), making other members admins and removing people. Someone who is removed from every club is signed out on their next click.</dd></div>
+      <div><dt>Site admin</dt><dd>Sets up new clubs and can manage any of them.</dd></div>
+    </dl>
+  </section>
+
+  <section id="strava">
+    <h2>Strava</h2>
+    <p>Connect Strava to pull in your own routes. They are kept for up to seven days and only you can see them. When you share one, the site makes your own copy, with your stops, cues and notes, as a route file you own, and shares that. It is separate from Strava and stays until you delete it. Disconnecting Strava, or revoking access on Strava, deletes what we hold from it. The app works fully without Strava.</p>
+  </section>
+
+  <section id="data">
+    <h2>Where the information comes from, and its limits</h2>
+    <ul>
+      <li><b>Maps, stops, roadworks and café hours:</b> OpenStreetMap, which volunteers keep up to date. Sometimes it is wrong or out of date.</li>
+      <li><b>Weather warnings:</b> Met &Eacute;ireann, shown as issued (Ireland only).</li>
+      <li><b>Forecast and elevation:</b> Open-Meteo.</li>
+      <li><b>Routing when you edit a route:</b> BRouter, on OpenStreetMap roads.</li>
+      <li><b>Your club&rsquo;s own stops and closures:</b> only as good as the last time someone checked them. Each saved stop shows when it was last verified.</li>
+    </ul>
+    <p>In an emergency call <strong>112 or 999</strong>. Nothing on this site replaces that.</p>
+  </section>
+
+  <section id="words">
+    <h2>Glossary</h2>
+    <dl>
+      <div><dt>Planned stop</dt><dd>A place the group actually stops, usually the café. It adds the stop time to every later arrival time.</dd></div>
+      <div><dt>Regroup point</dt><dd>A suggested place to wait for the slower group, usually the top of a climb.</dd></div>
+      <div><dt>Cue</dt><dd>A note on the map, such as a hazard, a turn, water or first aid, that goes on the ride sheet and your device.</dd></div>
+      <div><dt>Via point</dt><dd>A spot you drag the route through when editing, so it follows the road you want.</dd></div>
+      <div><dt>Pace group</dt><dd>A group riding at a similar speed, shown with its speed in a red ring.</dd></div>
+    </dl>
+    {% if contact %}<p class="muted">Questions about the site? {{ contact }}</p>{% endif %}
+    <p class="muted small">Your club admin can also help with how your club uses it.</p>
+  </section>
+</div>
+{% endblock %}

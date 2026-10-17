@@ -57,7 +57,9 @@
   </dl>
   {% if s.leader_phone %}<p>Ride leader: <a href="tel:{{ s.leader_phone | replace(' ', '') }}"><strong>{{ s.leader_phone }}</strong></a></p>{% endif %}
   <p class="noprint actions">
-    <button type="button" class="btn small" id="copy-wa">Copy summary for WhatsApp</button>
+    <button type="button" class="btn small" id="share-native" hidden data-title="{{ s.title }}" data-url="{{ share_url or '' }}">Share this ride</button>
+    <button type="button" class="btn small alt" id="copy-wa">Copy summary for WhatsApp</button>
+    <a class="btn small link alt" href="{{ base }}/ride.ics">Add to calendar</a>
     <a class="btn small link alt" href="{{ base }}/cue-card.pdf">Cue card (PDF)</a>
     <button type="button" class="btn small alt" onclick="window.print()">Print</button>
   </p>
@@ -69,7 +71,7 @@
   <h2>Pace groups</h2>
   <div class="tablewrap"><table class="sheet-table">
     <thead><tr><th>Group</th><th>Speed</th><th>Stop</th><th>Ride time</th><th>Back about</th></tr></thead>
-    <tbody>{% for g in s.groups %}<tr><td><strong>{{ g.name }}</strong></td><td>{{ '%g' % g.speed_kmh }} km/h</td><td>{{ g.stop_min }} min each</td><td>{{ g.ride_time }}</td><td><strong>{{ g.finish }}</strong></td></tr>{% endfor %}</tbody>
+    <tbody>{% for g in s.groups %}<tr><td><span class="groupline"><span class="roundel sm" role="img" aria-label="Group {{ g.name }}, {{ '%g' % g.speed_kmh }} kilometres an hour">{{ '%g' % g.speed_kmh }}</span><strong>{{ g.name }}</strong></span></td><td>{{ '%g' % g.speed_kmh }} km/h</td><td>{{ g.stop_min }} min each</td><td>{{ g.ride_time }}</td><td><strong>{{ g.finish }}</strong></td></tr>{% endfor %}</tbody>
   </table></div>
   {% for note in s.daylight.warnings %}<p class="wx-flag">🔦 {{ note }}</p>{% endfor %}
   {% if s.daylight.sunrise %}<p class="small muted">Sunrise {{ s.daylight.sunrise }} · Sunset {{ s.daylight.sunset }}</p>{% endif %}
@@ -192,6 +194,13 @@
     try { await navigator.clipboard.writeText(t); m.textContent = 'Copied: paste it into the group.'; }
     catch (e) { m.textContent = 'Copy this:\n' + t; }
   });
+  var sn = document.getElementById('share-native');
+  if (sn && navigator.share) {                       /* the phone's own share sheet: WhatsApp, Messages, email... */
+    sn.hidden = false;
+    sn.addEventListener('click', function () {
+      navigator.share({ title: sn.dataset.title, text: document.getElementById('wa-text').textContent, url: sn.dataset.url || location.href }).catch(function () {});
+    });
+  }
   if (!navigator.onLine) document.getElementById('offline').hidden = false;
   window.addEventListener('offline', function () { document.getElementById('offline').hidden = false; });
   window.addEventListener('online', function () { document.getElementById('offline').hidden = true; });

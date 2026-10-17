@@ -7,3 +7,12 @@ document.addEventListener('click', async (e) => {
   catch (err) { prompt('Copy this:', text); }
   setTimeout(() => { b.textContent = old; }, 1600);
 });
+
+// The phone's own share sheet for an invite, where there is one
+(function () {
+  const b = document.getElementById('invite-native');
+  if (b && navigator.share) {
+    b.hidden = false;
+    b.addEventListener('click', () => navigator.share({ title: 'Ride Leader Kit invite', text: b.dataset.text }).catch(() => {}));
+  }
+})();

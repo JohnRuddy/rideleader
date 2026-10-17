@@ -11,7 +11,7 @@ from flask import Blueprint, abort, current_app, g, redirect, render_template, r
 
 from . import clubs, db, ratelimit
 from .mailer import MailError, get_mailer, mail_is_real
-from .models import Invite, LoginToken, User
+from .models import Club, Invite, LoginToken, User
 
 bp = Blueprint("auth", __name__)
 
@@ -118,10 +118,14 @@ def _valid(token: str) -> LoginToken | None:
 
 @bp.get("/login/<token>")
 def verify(token):
-    if _valid(token) is None:
+    row = _valid(token)
+    if row is None:
         return render_template("login.html", error="That sign-in link has expired or was already used. Ask for a new one.",
                                next=""), 400
-    return render_template("login_confirm.html", token=token, next=request.args.get("next", ""))
+    invite = db.session.get(Invite, row.invite_id) if row.invite_id else None
+    club = db.session.get(Club, invite.club_id) if invite else None
+    return render_template("login_confirm.html", token=token, next=request.args.get("next", ""), email=row.email,
+                           club=club, role=invite.role if invite else None)
 
 
 @bp.post("/login/<token>")

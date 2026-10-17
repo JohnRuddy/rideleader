@@ -77,12 +77,23 @@ def upload():
     return redirect(url_for("main.show", route_id=route.id))
 
 
+def _next_step(route: Route) -> dict | None:
+    """The one thing a leader should do next with this route: find stops, then share it."""
+    scanned = any(w.origin in ("osm", "club") for w in route.waypoints)
+    if not scanned:
+        return {"tab": "stops", "text": "Find the cafés, water and defibrillators along the route.", "button": "Find stops"}
+    if not (route.ride and route.ride.share_token):
+        return {"tab": "share", "text": "Looking good. Add a word for the group and send them the plan.", "button": "Share it"}
+    return None
+
+
 @bp.get("/routes/<int:route_id>")
 def show(route_id):
     route = db.session.get(Route, route_id) or abort(404)
+    can_edit = can_change(route, g.user)
     return render_template("route.html", route=route, tile_url=current_app.config["TILE_URL"],
                            categories=categories.public_json(), device=_current_device(),
-                           can_edit=can_change(route, g.user))
+                           can_edit=can_edit, next_step=_next_step(route) if can_edit and g.user else None)
 
 
 @bp.post("/routes/<int:route_id>/delete")

@@ -4,6 +4,7 @@
   const base = box.dataset.base, canShare = box.dataset.can === 'yes', signedIn = box.dataset.signedIn === 'yes';
   const stateEl = document.getElementById('share-state'), msg = document.getElementById('share-msg');
   const create = document.getElementById('share-create'), copy = document.getElementById('share-copy'), stop = document.getElementById('share-stop');
+  const native = document.getElementById('share-native');
   let url = null;
   const api = async (method, body) => {
     const r = await fetch(`${base}/share`, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
@@ -26,6 +27,7 @@
       stateEl.append('Anyone with this link can view the ride: ', a);
     } else stateEl.textContent = signedIn ? 'Not shared yet.' : 'Sign in to share this ride.';
     create.hidden = s.shared || !signedIn; copy.hidden = stop.hidden = !s.shared;
+    native.hidden = !(s.shared && navigator.share);
   }
   async function load() { try { render(await (await fetch(`${base}/share`)).json()); } catch (e) { stateEl.textContent = e.message; } }
 
@@ -42,6 +44,12 @@
     try { await api('DELETE'); render({ shared: false, url: null, can_share: true }); msg.textContent = 'Sharing stopped.'; } catch (e) { msg.textContent = e.message; }
   });
   copy.addEventListener('click', () => url && clip(url, 'Link copied.'));
+  if (native) native.addEventListener('click', async () => {      // the phone's own share sheet: WhatsApp, Messages, email...
+    try {
+      const text = await (await fetch(`${base.replace('/api', '')}/summary.txt`)).text();
+      await navigator.share({ title: document.getElementById('route-title').textContent, text, url });
+    } catch (e) { if (e.name !== 'AbortError') msg.textContent = 'Couldn\'t open sharing: ' + e.message; }
+  });
   document.getElementById('share-wa').addEventListener('click', async () => {
     msg.textContent = 'Working it out…';
     try { const t = await (await fetch(`${base.replace('/api', '')}/summary.txt`)).text(); clip(t, 'Copied: paste it into the group.'); } catch (e) { msg.textContent = e.message; }
@@ -57,3 +65,11 @@
   });
   load();
 })();
+
+// "Next" prompt: jump to the tab it names
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-goto]');
+  if (!b) return;
+  const tab = document.getElementById('tab-' + b.dataset.goto);
+  if (tab) { tab.click(); tab.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+});

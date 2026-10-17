@@ -99,9 +99,9 @@ def create_app(config: dict | None = None) -> Flask:
     from . import account, auth, club_views, conditions_views, security, share_views, strava_views
 
     security.init_app(app)
-    from . import clubadmin
+    from . import clubadmin, guide
 
-    for module in (auth, account, strava_views, conditions_views, club_views, share_views, clubadmin):
+    for module in (auth, account, strava_views, conditions_views, club_views, share_views, clubadmin, guide):
         app.register_blueprint(module.bp)
 
     import click

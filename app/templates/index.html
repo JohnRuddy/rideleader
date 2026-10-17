@@ -11,8 +11,21 @@
   <span class="un-go">Open the plan</span>
 </a>
 {% endif %}
+{% if current_user and not routes %}
+<section class="welcome" aria-labelledby="welcome-h">
+  <p class="eyebrow">{{ 'Welcome to ' ~ current_club.name if current_club else 'Welcome' }}</p>
+  <h2 id="welcome-h">Get your first ride ready</h2>
+  <p>It takes about as long as a coffee, and everyone gets the same page on their phone.</p>
+  <ol>
+    <li><div><b>Bring a route</b><span>Drop in a GPX file below{% if strava_enabled %}, or <a href="{{ url_for('strava.home') }}">pull one from your Strava</a>{% endif %}.</span></div></li>
+    <li><div><b>Check it</b><span>Pick the day. We check weather warnings, daylight, closures and stops.</span></div></li>
+    <li><div><b>Share it</b><span>Send the link to the group chat. No app, no sign-in for riders.</span></div></li>
+  </ol>
+  <a class="btn alt" href="{{ url_for('guide.page') }}">See how it works</a>
+</section>
+{% endif %}
 <section class="card">
-  <h1>Plan a spin</h1>
+  <h1>{{ 'Plan a ride' if not routes else 'Plan a spin' }}</h1>
   <p class="muted">Start with a route. Drop in a GPX file{% if strava_enabled %}, or <a href="{{ url_for('strava.home') }}">bring one in from your Strava</a>{% endif %}. Then pick the day, tick the stops, and send the group the plan.</p>
   {% if not current_user %}<p class="muted small"><a href="{{ url_for('auth.login') }}">Sign in</a> to keep your routes private to you.</p>{% endif %}
   {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
@@ -46,7 +59,7 @@
     {% endfor %}
   </ul>
 </section>
-{% else %}
+{% elif not current_user %}
 <section class="card">
   <h2>How a ride comes together</h2>
   <ol class="steps">

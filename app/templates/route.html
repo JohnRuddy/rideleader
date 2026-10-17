@@ -10,6 +10,10 @@
     <p class="eyebrow">{% if route.source == 'strava' %}From Strava{% elif route.visibility == 'club' %}Club route{% else %}Your route{% endif %}</p>
     <h1><span id="route-title">{{ route.title }}</span>{% if can_edit %} <button type="button" class="linkish" id="rename-route" title="Rename this ride">Rename</button>{% endif %}</h1>
   </div>
+  {% if next_step %}
+  <div class="next-step" role="note"><b>Next</b> <span>{{ next_step.text }}</span>
+    <button type="button" class="btn small" data-goto="{{ next_step.tab }}">{{ next_step.button }}</button></div>
+  {% endif %}
   <dl class="statstrip" aria-label="Route summary">
     <div><dt>Distance</dt><dd><span id="stat-dist">{{ '%.1f' % (route.length_m / 1000) }} km</span></dd></div>
     <div><dt>Climbing</dt><dd><span id="stat-up">{% if route.ascent_m is not none %}{{ route.ascent_m | round | int }} m{% else %}n/a{% endif %}</span></dd></div>
@@ -185,6 +189,7 @@
         <div id="share-state" class="small"></div>
         <p class="actions">
           <button type="button" class="btn small" id="share-create" hidden>Create a share link</button>
+          <button type="button" class="btn small" id="share-native" hidden>Send to the group</button>
           <button type="button" class="chip" id="share-copy" hidden>Copy the link</button>
           <button type="button" class="chip" id="share-stop" hidden>Stop sharing</button>
         </p>

@@ -3,12 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f4f2ec">
+  <meta name="theme-color" content="#0b5d3b">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{% block title %}Ride Leader Kit{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='9' fill='%23101418'/%3E%3Cpath d='M7 24c6.5 0 5-12 11-12s4.5 12 11 12' fill='none' stroke='%23ffd60a' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="{{ url_for('static', filename='brand.css') }}">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='9' fill='%230b5d3b'/%3E%3Cpath d='M7 24c6.5 0 5-12 11-12s4.5 12 11 12' fill='none' stroke='%23ffd60a' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E">
   <script>
     /* every state-changing fetch() from our own pages carries the CSRF token */
     (function () {
@@ -24,31 +25,48 @@
   {% block head %}{% endblock %}
 </head>
 <body>
+  {% set ep = request.endpoint or '' %}
+  <a class="skip" href="#main">Skip to the page</a>
   <header class="top">
     <a href="{{ url_for('main.index') }}" class="brand" aria-label="Ride Leader Kit, home">
-      <svg class="mark" viewBox="0 0 36 36" width="34" height="34" aria-hidden="true">
-        <rect width="36" height="36" rx="9" fill="#101418"/>
-        <path d="M7 24c6.5 0 5-12 11-12s4.5 12 11 12" fill="none" stroke="#ffd60a" stroke-width="3.2" stroke-linecap="round"/>
-        <circle cx="29" cy="24" r="2.4" fill="#fff"/>
+      <svg class="mark" viewBox="0 0 36 36" width="36" height="36" aria-hidden="true">
+        <rect width="36" height="36" rx="9" fill="#ffd60a"/>
+        <path d="M7 24c6.5 0 5-12 11-12s4.5 12 11 12" fill="none" stroke="#101418" stroke-width="3.2" stroke-linecap="round"/>
+        <circle cx="29" cy="24" r="2.4" fill="#101418"/>
       </svg>
       <span class="wordmark">Ride Leader Kit</span></a>
-    <nav class="nav">
-      {% if current_user %}
-        <a href="{{ url_for('main.index') }}">My routes</a>
-        <a href="{{ url_for('club.page') }}">Club stops</a>
-        <a href="{{ url_for('clubadmin.index') }}" class="club-link" title="Your clubs and members">{{ current_club.name if current_club else 'Clubs' }}</a>
-        {% if not public %}<button type="button" class="linkbtn" data-open-help>Help</button>{% endif %}
-        <a href="{{ url_for('account.account') }}" class="who" title="Your account">{{ current_user.email }}</a>
-        <form method="post" action="{{ url_for('auth.logout') }}" class="inline">{{ csrf_input() }}<button type="submit" class="linkbtn">Sign out</button></form>
-      {% else %}
-        {% if not public %}<button type="button" class="linkbtn" data-open-help>Help</button>{% endif %}
-        <a href="{{ url_for('auth.login') }}">Sign in</a>
-      {% endif %}
+    {% if public %}
+    {# the public ride sheet ships no scripts, so its menu is plain links #}
+    <nav class="nav" aria-label="Main">
+      <a href="{{ url_for('guide.page') }}">How it works</a>
+      <a href="{{ url_for('auth.login') }}">Sign in</a>
     </nav>
+    {% else %}
+    <details class="menu" id="menu">
+      <summary><span class="bars" aria-hidden="true"></span>Menu</summary>
+      <nav class="nav" aria-label="Main">
+        {% if current_user %}
+          <a href="{{ url_for('main.index') }}" {% if ep in ('main.index', 'main.show') %}aria-current="page"{% endif %}>My routes</a>
+          <a href="{{ url_for('club.page') }}" {% if ep == 'club.page' %}aria-current="page"{% endif %}>Club stops</a>
+          <a href="{{ url_for('clubadmin.index') }}" class="club-link" title="Your clubs and members" {% if ep.startswith('clubadmin') %}aria-current="page"{% endif %}>{{ current_club.name if current_club else 'Clubs' }}</a>
+          <a href="{{ url_for('guide.page') }}" {% if ep == 'guide.page' %}aria-current="page"{% endif %}>How it works</a>
+          <button type="button" class="linkbtn" data-open-help>Help</button>
+          <a href="{{ url_for('account.account') }}" class="who" title="Your account">{{ current_user.email }}</a>
+          <form method="post" action="{{ url_for('auth.logout') }}" class="inline">{{ csrf_input() }}<button type="submit" class="linkbtn">Sign out</button></form>
+        {% else %}
+          <a href="{{ url_for('guide.page') }}" {% if ep == 'guide.page' %}aria-current="page"{% endif %}>How it works</a>
+          <button type="button" class="linkbtn" data-open-help>Help</button>
+          <a href="{{ url_for('auth.login') }}">Sign in</a>
+        {% endif %}
+      </nav>
+    </details>
+    <script>(function(){var m=document.getElementById('menu');if(!m)return;var q=matchMedia('(min-width:900px)');function f(){m.open=q.matches}f();q.addEventListener('change',f)})()</script>
+    {% endif %}
   </header>
-  <main>{% block content %}{% endblock %}</main>
+  <main id="main">{% block content %}{% endblock %}</main>
   <footer class="foot muted small">
     {% if not public %}<button type="button" class="linkbtn" data-open-help>Help</button>{% endif %}
+    <a href="{{ url_for('guide.page') }}">How it works</a>
     <a href="{{ url_for('account.privacy') }}">Privacy</a>
     <a href="https://www.openstreetmap.org/copyright" rel="noopener noreferrer" target="_blank">Map data © OpenStreetMap contributors</a>
     <a href="https://www.met.ie/warnings" rel="noopener noreferrer" target="_blank">Met Éireann warnings</a>

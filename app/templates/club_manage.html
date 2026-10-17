@@ -20,6 +20,8 @@
     Works until {{ fresh.expires }}{% if fresh.max_uses %}, up to {{ fresh.max_uses }} time{{ '' if fresh.max_uses == 1 else 's' }}{% endif %}.</p>
   <p class="row-gap">
     <button type="button" class="btn" data-copy="{{ fresh.code }}">Copy the code</button>
+    <a class="btn alt" href="https://wa.me/?text={{ ('Join ' ~ club.name ~ ' on Ride Leader Kit. Open ' ~ fresh.link ~ ' and sign in with your email. Your invite code: ' ~ fresh.code) | urlencode }}" target="_blank" rel="noopener noreferrer">Send on WhatsApp</a>
+    <button type="button" class="btn alt" id="invite-native" hidden data-text="Join {{ club.name }} on Ride Leader Kit. Open {{ fresh.link }} and sign in with your email. Your invite code: {{ fresh.code }}">Share&hellip;</button>
     <button type="button" class="btn ghost" data-copy="{{ fresh.link }}">Copy a sign-in link with the code filled in</button>
   </p>
   <p class="warn small">This is the only time the code is shown. Send it to the person yourself (WhatsApp, email, in person).</p>

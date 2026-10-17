@@ -1,11 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Sign in · Ride Leader Kit{% endblock %}
+{% block title %}{{ ('Join ' ~ club.name) if club else 'Sign in' }} · Ride Leader Kit{% endblock %}
 {% block content %}
 <section class="card narrow">
-  <h1>Finish signing in</h1>
+  <p class="eyebrow">{{ 'Almost in' if club else 'One tap to go' }}</p>
+  <h1>{{ ('Join ' ~ club.name) if club else 'Finish signing in' }}</h1>
+  <p class="muted">{% if club %}You're joining <strong>{{ club.name }}</strong> as {{ 'a club admin' if role == 'admin' else 'a member' }}, with <strong>{{ email }}</strong>. You'll share routes, stops and closures with the club.{% else %}Signing in as <strong>{{ email }}</strong>.{% endif %}</p>
   <form method="post" action="{{ url_for('auth.verify_post', token=token, next=next) }}" class="stack">
     {{ csrf_input() }}
-    <button type="submit" class="btn">Sign in</button>
+    <button type="submit" class="btn">{{ 'Join and sign in' if club else 'Sign in' }}</button>
   </form>
+  <p class="muted small">Not you? Close this page: the link only works once.</p>
 </section>
 {% endblock %}

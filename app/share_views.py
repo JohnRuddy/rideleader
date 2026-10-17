@@ -7,6 +7,7 @@ A route that came from Strava is never shown as it is: sharing it makes the lead
 cues, ride plan and notes, stored as a route file they own, separate from Strava) after one confirmation, and shares
 that. The confirmation is logged. See strava_service.publish_to_club."""
 import secrets
+from datetime import datetime
 
 from flask import Blueprint, Response, abort, current_app, g, jsonify, render_template, request, url_for
 
@@ -142,6 +143,45 @@ def public_summary(token):
 def public_card(token):
     route = _public_ride(token).route
     return _pdf(route, public=True)
+
+
+def _ics_text(v: str) -> str:
+    """RFC 5545 text escaping: backslash, semicolon, comma and line breaks."""
+    v = (v or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,")
+    return v.replace("\r\n", "\n").replace("\n", "\\n")
+
+
+def _ics(route: Route, url: str | None) -> Response:
+    """A calendar entry for the ride: day, start time (as UTC), meeting point, the leader's word and the sheet link."""
+    from datetime import timezone
+    plan = Plan(route)
+    ride = plan.ride
+    start, end = plan.start.astimezone(timezone.utc), plan.finish.astimezone(timezone.utc)
+    fmt = "%Y%m%dT%H%M%SZ"
+    stamp = datetime.now(timezone.utc).strftime(fmt)
+    desc = (ride.notes + "\n\n" if ride.notes else "") + (f"Ride sheet: {url}" if url else "")
+    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Ride Leader Kit//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "BEGIN:VEVENT",
+             f"UID:ride-{ride.id}-{start.strftime(fmt)}@rideleader", f"DTSTAMP:{stamp}", f"DTSTART:{start.strftime(fmt)}",
+             f"DTEND:{end.strftime(fmt)}", f"SUMMARY:{_ics_text(route.title)}", f"LOCATION:{_ics_text(ride.meeting_name or '')}",
+             f"DESCRIPTION:{_ics_text(desc.strip())}"]
+    if url:
+        lines.append(f"URL:{url}")
+    lines += ["END:VEVENT", "END:VCALENDAR"]
+    slug = "".join(c if c.isalnum() else "-" for c in route.title.lower()).strip("-")[:50] or "ride"
+    return _safe(Response("\r\n".join(lines) + "\r\n", mimetype="text/calendar; charset=utf-8",
+                          headers={"Content-Disposition": f'attachment; filename="{slug}.ics"'}))
+
+
+@bp.get("/r/<token>/ride.ics")
+def public_ics(token):
+    return _ics(_public_ride(token).route, _share_url(token))
+
+
+@bp.get("/routes/<int:route_id>/ride.ics")
+def ics(route_id):
+    route = db.session.get(Route, route_id) or abort(404)
+    t = get_or_create_ride(route).share_token
+    return _ics(route, _share_url(t) if t else None)
 
 
 @bp.get("/r/sw.js")

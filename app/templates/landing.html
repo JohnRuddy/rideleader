@@ -21,7 +21,7 @@
           <a class="btn btn-lg btn-yellow" href="{{ url_for('auth.login', next='/') }}">Plan a ride</a>
           <a class="btn btn-lg btn-ghost" href="#checks">See what it checks</a>
         </div>
-        <p class="fine muted">By invitation: your club admin gives you an invite code for your first sign-in. No password and nothing to install. We email you a link.</p>
+        <p class="fine muted">By invitation: your club admin gives you an invite code for your first sign-in. No password and nothing to install. We email you a link. <a href="{{ url_for('guide.page') }}">How it works</a></p>
       </div>
       <figure class="shot" aria-label="The Ride Leader Kit planning screen showing a route, the weather and a readiness check">
         <div class="shot-bar" aria-hidden="true"><i></i><i></i><i></i><span>rideleader.cyclingtools.cc</span></div>
@@ -71,9 +71,9 @@
         <div class="sheet-note"><span class="eyebrow">A word from the leader</span>
           <p>Mudguards on, please, it&rsquo;ll be wet underfoot. We regroup at every stop and nobody gets left behind.</p></div>
         <div class="sheet-rows">
-          <div><b>A</b><span>28 km/h</span><em>Kilcullen 10:14</em></div>
-          <div><b>B</b><span>24 km/h</span><em>Kilcullen 10:21</em></div>
-          <div><b>C</b><span>20 km/h</span><em>Kilcullen 10:32</em></div>
+          <div><span class="roundel" role="img" aria-label="Group A, 28 kilometres an hour">28</span><span class="gname">Group A</span><em>Kilcullen 10:14</em></div>
+          <div><span class="roundel" role="img" aria-label="Group B, 24 kilometres an hour">24</span><span class="gname">Group B</span><em>Kilcullen 10:21</em></div>
+          <div><span class="roundel" role="img" aria-label="Group C, 20 kilometres an hour">20</span><span class="gname">Group C</span><em>Kilcullen 10:32</em></div>
         </div>
       </div>
     </div>
