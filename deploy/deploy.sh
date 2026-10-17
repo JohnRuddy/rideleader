@@ -62,9 +62,12 @@ rollback() {
 COMMIT_SHORT="${APP_IMAGE_NEW##*:}"; COMMIT_SHORT="${COMMIT_SHORT:0:7}"
 log "Deploying $APP_IMAGE_NEW (previous: ${PREVIOUS:-none})"
 mkdir -p backups
-if "${COMPOSE[@]}" ps --status running --services 2>/dev/null | grep -qx db; then
+if [[ "$(docker inspect -f '{{.State.Running}}' rideleader-db-1 2>/dev/null)" == "true" ]]; then
   log "Backing up the database first"
-  bash deploy/backup.sh >> backups/backup.log 2>&1 || echo "Pre-deploy backup failed; see backups/backup.log" >&2
+  if ! bash deploy/backup.sh >> backups/backup.log 2>&1; then
+    echo "::warning::Pre-deploy database backup failed; see backups/backup.log on the server" >&2
+  fi
+  tail -1 backups/backup.log
 fi
 start "$APP_IMAGE_NEW" "$HOURS_IMAGE_NEW" "$COMMIT_SHORT" || rollback
 healthy || rollback
