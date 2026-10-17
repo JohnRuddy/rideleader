@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Start the database, cache and opening-hours service
         run: docker compose up -d --wait db redis hours
       - name: Create the test database
@@ -43,7 +43,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -64,7 +64,7 @@ jobs:
   secrets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Scan the whole history for committed secrets
@@ -81,7 +81,7 @@ jobs:
       app: ${{ steps.names.outputs.app }}
       hours: ${{ steps.names.outputs.hours }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: names
         run: |
           repo="ghcr.io/${GITHUB_REPOSITORY,,}"
@@ -132,7 +132,7 @@ jobs:
       APP_IMAGE: ${{ needs.build.outputs.app }}
       HOURS_IMAGE: ${{ needs.build.outputs.hours }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check deploy configuration
         env:
