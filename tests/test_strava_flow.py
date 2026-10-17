@@ -501,11 +501,35 @@ def test_revoking_on_strava_deletes_their_data_and_emails_them(world):
     connect(c)
     c.get("/strava/routes")
     c.post("/strava/routes/101/import")
+    fake.fail["refresh"] = StravaUnauthorized("revoked", 400)                                # Strava confirms access is gone
     r = other_client(c).post("/strava/webhook", json=event())                               # no session, no CSRF: it is Strava calling
     assert r.status_code == 200
     assert StravaConnection.query.count() == 0 and rows() == [] and strava_routes() == []
     assert outbox(c)[-1]["subject"] == "Your Strava data has been deleted" and "you revoked access on Strava" in outbox(c)[-1]["body"]
     assert fake.revoked == []                                                               # already revoked by them
+
+
+def test_a_forged_revocation_changes_nothing_because_strava_still_accepts_the_connection(world):
+    c, fake = world
+    connect(c)
+    c.get("/strava/routes")
+    c.post("/strava/routes/101/import")
+    before = StravaConnection.query.one().refresh_token_enc
+    assert other_client(c).post("/strava/webhook", json=event()).status_code == 200
+    assert StravaConnection.query.count() == 1 and len(rows()) == 3 and len(strava_routes()) == 1
+    assert ("refresh", "ref1") in [x[:2] for x in fake.calls] or any(x[0] == "refresh" for x in fake.calls)   # it asked Strava
+    assert StravaConnection.query.one().refresh_token_enc != before                          # and kept the rotated tokens
+    assert not [m for m in outbox(c) if m["subject"] == "Your Strava data has been deleted"]
+
+
+def test_a_revocation_that_cannot_be_checked_deletes_nothing(world):
+    c, fake = world
+    connect(c)
+    c.get("/strava/routes")
+    c.post("/strava/routes/101/import")
+    fake.fail["refresh"] = StravaError("Strava is down", 503)
+    assert other_client(c).post("/strava/webhook", json=event()).status_code == 200
+    assert StravaConnection.query.count() == 1 and len(strava_routes()) == 1
 
 
 @pytest.mark.parametrize("payload", [

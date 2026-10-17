@@ -275,11 +275,27 @@ def disconnect(user: User, client: StravaClient | None, reason: str, now=None, r
 
 
 def deauthorized_by_strava(athlete_id: int, client: StravaClient | None, now=None) -> bool:
-    """Webhook: the athlete revoked our access on Strava. Delete everything of theirs."""
+    """Webhook: the athlete says they revoked our access on Strava. Delete everything of theirs, but only after asking
+    Strava: webhook events are unsigned, so anyone who knew the subscription id and an athlete id could forge one.
+    A refresh is refused by Strava if access really was revoked; if it still works, the event was not true and
+    nothing is deleted. If we can't tell (Strava is down), nothing is deleted either: the daily re-check catches a
+    real revocation."""
     conn = StravaConnection.query.filter_by(athlete_id=athlete_id).first()
-    if conn is None:
+    if conn is None or client is None:
         return False
     user = db.session.get(User, conn.user_id)
+    try:
+        fresh = client.refresh(crypto.decrypt(conn.refresh_token_enc))
+    except StravaUnauthorized:
+        pass                                           # Strava confirms: access is gone
+    except StravaError:
+        log.warning("Strava revocation event for an athlete could not be checked; leaving their data alone")
+        return False
+    else:
+        _store_tokens(conn, fresh)                     # still authorised: keep the rotated tokens, ignore the event
+        db.session.commit()
+        log.warning("Ignored a Strava revocation event: Strava still accepts that athlete's connection")
+        return False
     disconnect(user, client, "you revoked access on Strava", revoke=False)
     return True
 
