@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#0b5d3b">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{% block title %}Ride Leader Kit{% endblock %}</title>
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="{{ url_for('static', filename='fonts/barlow-condensed-latin-800-normal.woff2') }}">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="{{ url_for('static', filename='fonts/barlow-latin-400-normal.woff2') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='brand.css') }}">

@@ -55,7 +55,7 @@
     <div><dt>Climbing</dt><dd>{{ (s.ascent_m ~ ' m') if s.ascent_m is not none else 'n/a' }}</dd></div>
     <div><dt>Descent</dt><dd>{{ (s.descent_m ~ ' m') if s.descent_m is not none else 'n/a' }}</dd></div>
   </dl>
-  {% if s.leader_phone %}<p>Ride leader: <a href="tel:{{ s.leader_phone | replace(' ', '') }}"><strong>{{ s.leader_phone }}</strong></a></p>{% endif %}
+  {% if s.leader_phone %}<p class="callline">Ride leader <a class="btn small callbtn" href="tel:{{ s.leader_phone | replace(' ', '') }}">Call {{ s.leader_phone }}</a></p>{% endif %}
   <p class="noprint actions">
     <button type="button" class="btn small" id="share-native" hidden data-title="{{ s.title }}" data-url="{{ share_url or '' }}">Share this ride</button>
     <button type="button" class="btn small alt" id="copy-wa">Copy summary for WhatsApp</button>

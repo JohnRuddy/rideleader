@@ -136,3 +136,9 @@ main:has(> .landing) { max-width: none; padding: 0; display: block; margin-top: 
 .sheet-rows .roundel { color: #101418; }
 .sheet-rows .gname { color: var(--ink); }
 .sec-dark .sheet-rows .gname { color: var(--ink); }
+
+/* the label inside a dark band stays yellow (the generic landing label rule must not turn it green on green) */
+.landing .sec-dark .eyebrow { color: var(--yellow); }
+.landing .sec-dark .sheet .eyebrow { color: var(--muted); }
+.landing .sec-dark .sheet-note .eyebrow { color: var(--warn); }
+.landing .final .eyebrow { color: var(--ink); }

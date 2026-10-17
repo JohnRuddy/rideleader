@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask
+from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
 
@@ -87,6 +87,16 @@ def create_app(config: dict | None = None) -> Flask:
         # Behind Caddy: believe one hop of X-Forwarded-For/Proto/Host so https URLs and client IPs are right.
         from werkzeug.middleware.proxy_fix import ProxyFix
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+    import mimetypes
+    mimetypes.add_type("font/woff2", ".woff2")
+
+    @app.after_request
+    def cache_fonts(resp):
+        # the font files never change under the same name: let browsers keep them for a year
+        if request.path.startswith("/static/fonts/"):
+            resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return resp
+
     db.init_app(app)
     from . import ops
     app.register_blueprint(ops.bp)

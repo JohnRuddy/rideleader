@@ -29,6 +29,18 @@ def account():
                            my_routes=Route.query.filter_by(owner_id=g.user.id).count())
 
 
+@bp.post("/account/name")
+@login_required
+def set_name():
+    """The name the club sees on the member list and beside your rides. Optional: your email is used without it."""
+    name = " ".join((request.form.get("display_name") or "").split())
+    if len(name) > 60:
+        name = name[:60].rstrip()
+    g.user.display_name = name or None
+    db.session.commit()
+    return redirect(url_for("account.account", saved="name"))
+
+
 def _export(user: User) -> dict:
     conn = svc.connection_for(user)
     routes = []

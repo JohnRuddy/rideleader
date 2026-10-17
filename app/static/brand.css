@@ -2,12 +2,35 @@
    Sign-post green, maillot yellow and road-ink, with the things club riders know on sight:
    hoop stripes, red-ringed speed roundels, roadside distance plates and numbered bibs. */
 
+/* Barlow and Barlow Condensed, SIL Open Font License 1.1 (see /static/fonts/OFL.txt), served from this site: no font server is contacted. */
+@font-face { font-family: "Barlow Condensed"; font-style: normal; font-weight: 600; font-display: swap;
+  src: url("/static/fonts/barlow-condensed-latin-600-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Barlow Condensed"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("/static/fonts/barlow-condensed-latin-700-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Barlow Condensed"; font-style: normal; font-weight: 800; font-display: swap;
+  src: url("/static/fonts/barlow-condensed-latin-800-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("/static/fonts/barlow-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 500; font-display: swap;
+  src: url("/static/fonts/barlow-latin-500-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 600; font-display: swap;
+  src: url("/static/fonts/barlow-latin-600-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("/static/fonts/barlow-latin-700-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
 :root {
   --green: #0b5d3b; --green-deep: #08432b; --green-ink: #eaf6ef; --green-soft: #dcefe4;
   --ring: #d4141c;                                   /* the red ring of an Irish speed-limit sign */
   --sash: linear-gradient(to bottom, var(--yellow) 0 34%, var(--ink) 34% 67%, #ffffff 67%);
-  /* Condensed display type from whatever the device already has (no downloads, nothing sent to a font server) */
-  --display: "Avenir Next Condensed", "Roboto Condensed", "Bahnschrift", "Barlow Condensed", "Arial Narrow", "Helvetica Neue", system-ui, sans-serif;
+    --display: "Barlow Condensed", "Avenir Next Condensed", "Roboto Condensed", "Bahnschrift", "Arial Narrow", system-ui, sans-serif;
+  --font: "Barlow", "Segoe UI Variable Text", "Segoe UI", "SF Pro Text", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
   --r: 14px; --r-sm: 10px;
 }
 @media (prefers-color-scheme: dark) {
@@ -174,3 +197,36 @@ label { font-weight: 600; }
 .guide .tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .guide table { min-width: 560px; }
 .guide section, .guide p, .guide dd, .guide li { overflow-wrap: anywhere; }
+
+/* ---------- readable at arm's length, outdoors, with gloves on ---------- */
+body { font-size: 17px; line-height: 1.55; }
+.small { font-size: .92rem; }
+.eyebrow { font-size: .84rem; }
+.badge { font-size: .78rem; padding: 2px 8px; }
+.statstrip dt { font-size: .78rem; }
+.grade-key { font-size: .84rem; }
+.un-date small { font-size: .8rem; }
+.muted { color: #4f5760; }                                  /* a touch darker than before: 6.8:1 on paper */
+@media (prefers-color-scheme: dark) { .muted { color: #b3bcc5; } }
+
+/* nothing you have to hit is smaller than a fingertip (44 px) */
+.chip, .btn.small, .map-btn, .nav .who, .menu > .nav .who { min-height: 44px; }
+summary { min-height: 44px; display: flex; align-items: center; }
+.linkish { font-size: .95rem; padding: 14px 10px; margin: -14px -4px; }
+.foot a, .foot .linkbtn { min-height: 44px; padding: 0 4px; }
+.foot { gap: 0 14px; }
+.maplibregl-ctrl-group button { width: 42px; height: 42px; }
+@media (max-width: 520px) { .editbar-row .chip, .editbar-row .btn.small { min-height: 44px; } }
+@media (pointer: coarse) { input[type=checkbox], input[type=radio] { width: 24px; height: 24px; } .switch { min-height: 48px; } }
+.foot .linkbtn { padding: 0 10px; }
+.word-chips .chip { min-height: 44px; }
+.maplibregl-ctrl-group button.maplibregl-ctrl-zoom-in, .maplibregl-ctrl-group button.maplibregl-ctrl-zoom-out, .maplibregl-ctrl-group button.maplibregl-ctrl-compass { width: 42px; height: 42px; }
+.maplibregl-ctrl-attrib .maplibregl-ctrl-attrib-button { width: 32px; height: 32px; }
+
+/* the ride leader's number is a button: easy to hit at the meeting point */
+.callline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 10px 0; font-weight: 600; }
+.callbtn { background: var(--green); color: #fff; border-color: var(--ink); }
+.callbtn:hover { background: var(--green-deep); }
+@media print { .callbtn { background: none; color: #000; border: 0; box-shadow: none; padding: 0; } }
+.name-form { max-width: 420px; margin: 12px 0; }
+.note-ok { padding: 10px 14px; border-left: 4px solid var(--ok); background: var(--ok-bg); border-radius: 0 var(--r-sm) var(--r-sm) 0; margin: 12px 0 0; }

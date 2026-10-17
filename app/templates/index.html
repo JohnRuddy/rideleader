@@ -49,7 +49,7 @@
       <a href="{{ url_for('main.show', route_id=r.id) }}">
         <span class="r-title"><strong>{{ r.title }}</strong>
           {% if r.source == 'strava' %}<span class="badge">Strava</span>{% elif r.visibility == 'club' %}<span class="badge">Club</span>{% endif %}</span>
-        <span class="muted">{{ '%.1f' % (r.length_m / 1000) }} km{% if r.ascent_m is not none %} · {{ r.ascent_m | round | int }} m climbing{% endif %}</span>
+        <span class="muted">{{ '%.1f' % (r.length_m / 1000) }} km{% if r.ascent_m is not none %} · {{ r.ascent_m | round | int }} m climbing{% endif %}{% if leaders.get(r.owner_id) and (not current_user or r.owner_id != current_user.id) %} · led by {{ leaders[r.owner_id] }}{% endif %}</span>
         {% if r.ride %}
           {% set past = r.ride.date < today %}
           <span class="r-when {{ 'past' if past else 'soon' }}">{{ r.ride.date.strftime('%a %d %b') }}, {{ r.ride.start_time.strftime('%H:%M') }}{% if past %} · date has passed{% endif %}</span>

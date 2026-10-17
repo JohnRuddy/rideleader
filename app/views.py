@@ -16,7 +16,7 @@ from . import pace
 from .bulk import apply_bulk
 from .jobs import enqueue_scan
 from .corridor import RouteIndex
-from .models import Climb, PaceGroup, Ride, Route, ScanJob, Waypoint
+from .models import Climb, PaceGroup, Ride, Route, ScanJob, User, Waypoint
 from .plan import DEFAULT_GROUPS, clock_now, get_or_create_ride as _get_or_create_ride, planned_s as _planned_s
 from .routemodel import parse_gpx, route_arrays
 from .route_factory import create_route
@@ -32,7 +32,9 @@ def _index(error=None, status=200):
     upcoming = sorted([r for r in routes if r.ride and r.ride.date >= today], key=lambda r: (r.ride.date, r.ride.start_time))
     rest = [r for r in routes if r not in upcoming]
     nxt = upcoming[0] if upcoming else None
-    return render_template("index.html", routes=upcoming + rest, error=error, today=today, next_ride=nxt,
+    owner_ids = {r.owner_id for r in routes if r.owner_id}
+    names = {u.id: (u.display_name or "") for u in User.query.filter(User.id.in_(owner_ids)).all()} if owner_ids else {}
+    return render_template("index.html", routes=upcoming + rest, error=error, today=today, next_ride=nxt, leaders=names,
                            days_to_next=(nxt.ride.date - today).days if nxt else None), status
 
 

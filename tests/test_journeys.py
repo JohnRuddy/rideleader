@@ -229,3 +229,84 @@ def test_the_site_admin_sets_up_a_club_and_is_taken_straight_to_inviting(client)
     r = client.post("/clubs", data={"name": "Kildare Wheelers"}, follow_redirects=True)
     page = r.data.decode()
     assert "Kildare Wheelers is set up" in page and "Invite people" in page and "Make an invite code" in page
+
+
+# ---------------- the typeface ----------------
+
+def test_every_font_and_asset_the_stylesheets_name_is_really_there(client):
+    import pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent / "app" / "static"
+    missing = []
+    for css in ("brand.css", "landing.css", "clubs.css"):
+        for ref in re.findall(r'url\("(/static/[^")]+)"\)', (root / css).read_text(encoding="utf-8")):
+            if not (root / ref.removeprefix("/static/")).exists():
+                missing.append(ref)
+    assert not missing, missing
+
+
+def test_fonts_are_served_with_the_right_type_and_kept_for_a_year(client):
+    r = client.get("/static/fonts/barlow-condensed-latin-800-normal.woff2")
+    assert r.status_code == 200 and r.mimetype == "font/woff2"
+    assert "max-age=31536000" in r.headers["Cache-Control"] and "immutable" in r.headers["Cache-Control"]
+    assert r.data[:4] == b"wOF2"
+    assert client.get("/static/fonts/OFL.txt").status_code == 200                         # the licence travels with the fonts
+
+
+def test_pages_use_the_house_fonts_and_preload_the_two_that_matter(client):
+    html = client.get("/welcome").data.decode()
+    assert html.count('rel="preload" as="font"') == 2 and "barlow-condensed-latin-800" in html and "barlow-latin-400" in html
+    css = client.get("/static/brand.css").data.decode()
+    assert '"Barlow Condensed"' in css and 'font-display: swap' in css
+    assert "fonts.googleapis.com" not in html and "fonts.gstatic.com" not in html + css    # nothing is fetched from a font server
+
+
+# ---------------- a name people know you by ----------------
+
+def test_a_member_can_set_the_name_their_club_sees(client):
+    a = user("a@example.com")
+    member(a, Club.query.first().id)
+    sign_in(client, a)
+    assert 'name="display_name"' in client.get("/account").data.decode()
+    r = client.post("/account/name", data={"display_name": "  Aoife   Murphy  "})
+    assert r.status_code == 302 and "saved=name" in r.headers["Location"]
+    assert db.session.get(User, a.id).display_name == "Aoife Murphy"                      # tidied
+    club_page = client.get(f"/clubs/{Club.query.first().id}").data.decode()
+    assert "Aoife Murphy" in club_page
+    client.post("/account/name", data={"display_name": "x" * 200})
+    assert len(db.session.get(User, a.id).display_name) == 60
+    client.post("/account/name", data={"display_name": "   "})
+    assert db.session.get(User, a.id).display_name is None                                # blank means "use my email"
+
+
+def test_the_ride_list_says_who_is_leading_each_ride(client):
+    a, b = user("a@example.com"), user("b@example.com")
+    for u in (a, b):
+        member(u, Club.query.first().id)
+    a.display_name = "Aoife Murphy"
+    db.session.commit()
+    sign_in(client, a)
+    upload(client, "Aoife's loop")
+    cb = other_client(client)
+    sign_in(cb, b)
+    assert "led by Aoife Murphy" in cb.get("/").data.decode()
+    assert "led by" not in client.get("/").data.decode()                                  # your own rides don't say so
+
+
+def test_setting_a_name_needs_sign_in(client):
+    r = client.post("/account/name", data={"display_name": "Nobody"})
+    assert r.status_code == 302 and "/login" in r.headers["Location"]
+
+
+# ---------------------------------------------- the call button ----------------------------------------------
+
+def test_the_ride_sheet_has_a_big_call_button_for_the_leader(client):
+    a = user("a@example.com")
+    member(a, Club.query.first().id)
+    sign_in(client, a)
+    upload(client)
+    rid = Route.query.one().id
+    client.put(f"/api/routes/{rid}/ride", json={"date": "2026-11-01", "start_time": "09:30", "leader_phone": "087 123 4567",
+                                                 "groups": [{"name": "A", "speed_kmh": 27, "stop_min": 15}]})
+    token = client.post(f"/api/routes/{rid}/share").get_json()["token"]
+    html = other_client(client).get(f"/r/{token}").data.decode()
+    assert 'class="btn small callbtn" href="tel:0871234567"' in html and "Call 087 123 4567" in html
