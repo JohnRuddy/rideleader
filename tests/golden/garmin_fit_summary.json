@@ -1,0 +1,64 @@
+{
+ "course_mesgs": [
+  {
+   "name": "Kildare Sunday",
+   "sport": "cycling"
+  }
+ ],
+ "course_point_mesgs": [
+  {
+   "distance": 4000.0,
+   "name": "Cafe Unicode Lo",
+   "position_lat": 634229469,
+   "position_long": -81604379,
+   "timestamp": 1160640720,
+   "type": "food"
+  },
+  {
+   "distance": 6000.0,
+   "name": "AED",
+   "position_lat": 634247365,
+   "position_long": -81127160,
+   "timestamp": 1160641080,
+   "type": "first_aid"
+  },
+  {
+   "distance": 7000.0,
+   "name": "Tap",
+   "position_lat": 634224697,
+   "position_long": -80888551,
+   "timestamp": 1160641260,
+   "type": "water"
+  },
+  {
+   "distance": 8000.0,
+   "name": "Cattle grid",
+   "position_lat": 634223504,
+   "position_long": -80649941,
+   "timestamp": 1160641440,
+   "type": "danger"
+  }
+ ],
+ "file_id_mesgs": [
+  {
+   "manufacturer": "development",
+   "product": 0,
+   "serial_number": 1380731649,
+   "time_created": 1160640000,
+   "type": "course"
+  }
+ ],
+ "lap_mesgs": [
+  {
+   "end_position_lat": 634223504,
+   "end_position_long": -82057736,
+   "start_position_lat": 634223504,
+   "start_position_long": -82320207,
+   "start_time": 1160640000,
+   "timestamp": 1160640264,
+   "total_distance": 1466.75,
+   "total_elapsed_time": 264.016,
+   "total_timer_time": 264.016
+  }
+ ]
+}

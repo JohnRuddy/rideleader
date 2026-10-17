@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Privacy · Ride Leader Kit{% endblock %}
+{% block content %}
+<section class="card prose">
+  <h1>Privacy policy</h1>
+  <p class="muted small">Plain-language summary of what this site does with your information.</p>
+
+  <h2>Who runs this</h2>
+  {% if controller %}
+    <p>{{ controller }}{% if contact %}. Contact: {{ contact }}{% endif %}.</p>
+  {% else %}
+    <p class="warn">The club running this site has not yet filled in its name and contact details (settings <code>CONTROLLER_NAME</code> and <code>CONTROLLER_CONTACT</code>). This must be done before the site is used by members.</p>
+  {% endif %}
+
+  <h2>What we hold</h2>
+  <ul>
+    <li><strong>Your email address</strong>, to sign you in with a link. We store no password. Sign-in links work once and expire after 15 minutes.</li>
+    <li><strong>Routes you upload or import</strong> and the waypoints, notes and choices you add to them.</li>
+    <li><strong>If you connect Strava:</strong> your Strava athlete number, the access it gave us (stored encrypted), the names, distances and shapes of your routes, and copies of routes you choose to import. This is deleted automatically after 7 days, immediately if you disconnect or revoke access, and if you delete your account.</li>
+    <li><strong>A record of your consents</strong> (what you agreed to, which version, when).</li>
+    <li><strong>Ride details you enter</strong>: meeting point, notes and your phone number. If you create a share link, anyone who has the link can see the ride sheet, including that phone number. You can stop sharing at any time and the link stops working.</li>
+    <li><strong>Club stops and closures you add</strong> (a place, a note, who checked it and when). These belong to the club's shared library. If you delete your account they stay, but are no longer linked to you.</li>
+  </ul>
+
+  <h2>What we do and don't do with Strava data</h2>
+  <ul>
+    <li>We only <em>read</em> your routes. We can't create or change anything on Strava.</li>
+    <li>Only you can see your Strava data in this app. A route is shared with the club only if you tell us it is your own and confirm you want to share it; the shared copy is a separate route file that you own.</li>
+    <li>We don't combine Strava data between people, build leaderboards or statistics from it, or feed it to any AI or machine-learning system.</li>
+  </ul>
+
+  <h2>Other services that receive information</h2>
+  <ul>
+    <li>When you search for stops, <strong>OpenStreetMap's Overpass service</strong> receives map areas along your route (not who you are).</li>
+    <li>When you edit a route, a <strong>cycle-routing service</strong> receives the coordinates being routed, and an <strong>elevation service</strong> may receive points along it when a file has no elevation.</li>
+    <li>Sign-in links and confirmation messages are sent by the email service the club has set up.</li>
+  </ul>
+
+  <h2>Your rights</h2>
+  <ul>
+    <li><strong>See and take your data:</strong> <a href="{{ url_for('account.account') }}">your account page</a> has a download of everything we hold about you.</li>
+    <li><strong>Withdraw Strava consent:</strong> press <em>Disconnect Strava</em> on your account page, or remove the app in your Strava settings. Either deletes your Strava data and we email you to confirm.</li>
+    <li><strong>Have everything deleted:</strong> use <em>Delete my account</em> on your account page, or ask the contact above. We confirm by email.</li>
+    <li><strong>Complain:</strong> to the Data Protection Commission (Ireland), <a href="https://www.dataprotection.ie">dataprotection.ie</a>.</li>
+  </ul>
+
+  <h2>Security</h2>
+  <p>Strava access is stored encrypted. Forms are protected against forgery, sign-in requests are rate limited, and connections should be over HTTPS.</p>
+</section>
+{% endblock %}

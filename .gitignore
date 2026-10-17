@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+.env.*
+!.env.example
+_probe/
+backups/
+.deployed-images
+node_modules/
+docs/*.pptx
+docs/DECK_REVIEW.md
+*.pem
+*.key

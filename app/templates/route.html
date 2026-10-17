@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}{{ route.title }} · Ride Leader Kit{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+{% endblock %}
+{% block content %}
+<header class="stagehead">
+  <div class="sh-title">
+    <p class="eyebrow">{% if route.source == 'strava' %}From Strava{% elif route.visibility == 'club' %}Club route{% else %}Your route{% endif %}</p>
+    <h1><span id="route-title">{{ route.title }}</span>{% if can_edit %} <button type="button" class="linkish" id="rename-route" title="Rename this ride">Rename</button>{% endif %}</h1>
+  </div>
+  <dl class="statstrip" aria-label="Route summary">
+    <div><dt>Distance</dt><dd><span id="stat-dist">{{ '%.1f' % (route.length_m / 1000) }} km</span></dd></div>
+    <div><dt>Climbing</dt><dd><span id="stat-up">{% if route.ascent_m is not none %}{{ route.ascent_m | round | int }} m{% else %}n/a{% endif %}</span></dd></div>
+    <div><dt>Descent</dt><dd><span id="stat-down">{% if route.descent_m is not none %}{{ route.descent_m | round | int }} m{% else %}n/a{% endif %}</span></dd></div>
+    <div><dt>On device</dt><dd><span id="export-count">0</span> <small>stops</small></dd></div>
+  </dl>
+  {% if route.source == 'strava' %}
+  <details class="strava-line">
+    <summary><span><strong>From your Strava.</strong> Private to you until {{ route.strava_expires_at.strftime('%d %b') }}</span>
+      {% if route.strava_route_id %}<a class="strava-view" href="https://www.strava.com/routes/{{ route.strava_route_id }}" rel="noopener noreferrer" target="_blank">View on Strava</a>{% endif %}</summary>
+    <p>Only you can see this route. It's kept until {{ route.strava_expires_at.strftime('%d %b %Y') }} and then deleted automatically.
+      <a href="{{ url_for('strava.publish', route_id=route.id) }}">Share a copy with your club…</a></p>
+  </details>
+  {% endif %}
+  {% if route.ele_m is none %}<p class="muted small">This file has no elevation data. An elevation lookup is planned.</p>{% endif %}
+</header>
+
+<div class="workbench">
+  <div class="stage">
+    <div class="editbar" id="editbar" data-base="/api/routes/{{ route.id }}">
+      <div class="editbar-row">
+        <button type="button" class="btn small" id="edit-toggle" aria-pressed="false">Edit route</button>
+        <button type="button" class="chip" id="undo" disabled>Undo</button>
+        <button type="button" class="chip" id="redo" disabled>Redo</button>
+        <label class="switch map-toggle"><input type="checkbox" id="show-wps" checked><span class="track" aria-hidden="true"></span><span>Show stops</span></label>
+      </div>
+      <div id="edit-tools" hidden>
+        <label class="switch"><input type="checkbox" id="opt-busy"><span class="track" aria-hidden="true"></span><span>Prefer quieter roads <small class="muted">(may leave your road)</small></span></label>
+        <label class="switch"><input type="checkbox" id="opt-unpaved"><span class="track" aria-hidden="true"></span><span>Allow unpaved roads and tracks</span></label>
+      </div>
+      <p class="muted small" id="edit-help" hidden>Drag the route line to reroute that stretch. Tap the map to pull the route through a point. Drag a numbered via point to move it, or tap it to remove it. Only the stretch you change is rerouted; the rest of your line is left exactly as it was.</p>
+      <p class="muted small" id="edit-msg" role="status" aria-live="polite"></p>
+    </div>
+    <div id="map" data-route-url="{{ url_for('main.api_route', route_id=route.id) }}" data-tile-url="{{ tile_url }}"></div>
+    <div class="profile-card">
+      <canvas id="profile" height="190" aria-label="Elevation profile, coloured by gradient"></canvas>
+      <div id="profile-readout" class="muted" aria-live="polite">Move along the profile to find that spot on the map.</div>
+      <ul class="grade-key" aria-label="Gradient colours">
+        <li><i style="background:#3f7fb0"></i>Steep descent</li><li><i style="background:#8ec1da"></i>Descent</li>
+        <li><i style="background:#a8cfa0"></i>Flat</li><li><i style="background:#e6d35f"></i>2–4%</li>
+        <li><i style="background:#f0a23c"></i>4–7%</li><li><i style="background:#e0572d"></i>7–10%</li><li><i style="background:#9c2127"></i>10%+</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="tools">
+    <div class="tabs" role="tablist" aria-label="Ride tools">
+      <button type="button" role="tab" id="tab-checks" aria-controls="pane-checks" aria-selected="true" data-pane="pane-checks">Checks <span class="dot" id="tab-checks-dot" hidden></span></button>
+      <button type="button" role="tab" id="tab-stops" aria-controls="pane-stops" aria-selected="false" data-pane="pane-stops">Stops <span class="count" id="tab-stops-count"></span></button>
+      <button type="button" role="tab" id="tab-conditions" aria-controls="pane-conditions" aria-selected="false" data-pane="pane-conditions">Conditions</button>
+      <button type="button" role="tab" id="tab-share" aria-controls="pane-share" aria-selected="false" data-pane="pane-share">Share</button>
+    </div>
+
+    <section class="pane" id="pane-checks" role="tabpanel" aria-labelledby="tab-checks">
+      <section class="readiness" id="readiness" data-state="loading" aria-live="polite">
+        <div class="rd-top">
+          <div><h2 class="rd-headline">Checking the ride…</h2><p class="rd-meta muted small"></p></div>
+          <button type="button" class="chip rd-refresh">Check again</button>
+        </div>
+        <ul class="rd-list"></ul>
+      </section>
+      <div id="warn-banner" class="warn-banner lv-none" role="region" aria-label="Met Éireann weather warnings" aria-live="polite">Checking weather warnings…</div>
+      <section class="block daypicker" id="daypicker" data-base="/api/routes/{{ route.id }}">
+        <h2>Day and start</h2>
+        <div id="days" class="days" role="listbox" aria-label="Ride day"></div>
+        <div class="dp-time"><label>Start time <input type="time" id="dp-time"></label><span id="dp-note" class="muted small"></span></div>
+      </section>
+      <section class="block" id="ride" data-url="{{ url_for('main.get_ride', route_id=route.id) }}">
+        <h2>Ride plan</h2>
+        <div class="ride-when">
+          <label>Date <input type="date" id="ride-date" required></label>
+          <label>Start <input type="time" id="ride-time" required></label>
+        </div>
+        <div class="ride-details">
+          <label>Meeting point <input type="text" id="ride-meeting" maxlength="120" placeholder="Kildare Town Square"></label>
+          <label>Your phone (shown to anyone with the ride link) <input type="tel" id="ride-phone" maxlength="30" inputmode="tel" placeholder="087 123 4567"></label>
+          <label>A word from the leader <span class="muted small">(first thing on the ride sheet, in the WhatsApp text and on the cue card)</span>
+            <textarea id="ride-notes" maxlength="1000" rows="3" placeholder="Mudguards on please. Nobody gets left behind: we regroup at the top of every climb."></textarea></label>
+          <div class="word-chips" id="ride-chips" role="group" aria-label="Quick lines to add"></div>
+          <p class="muted small" id="ride-notes-count" aria-live="polite"></p>
+        </div>
+        <div id="ride-groups" class="ride-groups" role="group" aria-label="Pace groups"></div>
+        <div class="ride-actions">
+          <button type="button" class="chip" id="ride-add">Add group</button>
+          <button type="button" class="chip" id="ride-abc" title="Three groups at 28, 24 and 20 km/h with 20 minute stops">A / B / C groups</button>
+          <button type="button" class="btn small" id="ride-save">Update times</button>
+        </div>
+        <p class="muted small" id="ride-msg" role="status" aria-live="polite"></p>
+        <ul id="ride-summary" class="ride-summary"></ul>
+      </section>
+    </section>
+
+    <section class="pane" id="pane-stops" role="tabpanel" aria-labelledby="tab-stops" hidden>
+      <aside class="panel" id="panel"
+             data-route-id="{{ route.id }}"
+             data-scan-url="{{ url_for('main.start_scan', route_id=route.id) }}"
+             data-bulk-url="{{ url_for('main.bulk_waypoints', route_id=route.id) }}"
+             data-categories='{{ categories | tojson }}'
+             data-device-label="{{ device.label }}"
+             data-device-limit="{{ device.course_point_limit or '' }}">
+        <h2>Stops &amp; waypoints</h2>
+        <div class="scan">
+          <button class="btn" id="scan-btn" type="button">Find stops along route</button>
+          <details class="scan-opts"><summary>Search distances</summary><div id="scan-opts"></div></details>
+          <div id="scan-status" class="muted" role="status" aria-live="polite"></div>
+        </div>
+        <div class="devmeter" id="devmeter" hidden>
+          <div class="dm-top"><span class="dm-label">On your <span id="dm-device"></span></span><span class="dm-num"><b id="dm-count">0</b> / <span id="dm-limit"></span></span></div>
+          <div class="dm-bar" role="presentation"><i id="dm-fill"></i></div>
+        </div>
+        <ul class="sumchips" id="stop-summary" aria-label="What is ticked"></ul>
+        <p class="warn small" id="limit-warn" hidden role="alert"></p>
+        <a class="btn" id="export-link" href="{{ url_for('main.export_page', route_id=route.id) }}">Export…</a>
+        {% if route.source == 'strava' %}
+        <div class="strava-back">
+          <a class="btn alt small" id="strava-back-link" href="{{ url_for('main.export_page', route_id=route.id, device='strava') }}">Send cues back to Strava…</a>
+          <p class="muted small">Strava doesn't let other apps change your routes, so this makes a copy with your cues that you upload yourself.</p>
+        </div>
+        {% endif %}
+        <p class="muted small" id="aed-note" hidden>Defibrillator locations come from community data (OpenStreetMap) and may be incomplete or out of date.</p>
+        <div id="groups"></div>
+      </aside>
+    </section>
+
+    <section class="pane" id="pane-conditions" role="tabpanel" aria-labelledby="tab-conditions" hidden>
+      <section class="block" id="weather">
+        <h2>Weather along the route</h2>
+        <label class="switch"><input type="checkbox" id="wind-toggle" checked><span class="track" aria-hidden="true"></span><span>Colour the route by wind (head, cross, tail)</span></label>
+        <div id="weather-body" class="muted">Checking the forecast…</div>
+      </section>
+      <section class="block" id="closures">
+        <h2>Closures and roadworks</h2>
+        <div id="closures-body" class="muted">Checking…</div>
+        {% if current_user %}
+        <button type="button" class="chip" id="cl-add">Add a closure…</button>
+        <form id="cl-form" class="stack" hidden>
+          <label>What is closed? <input type="text" name="description" maxlength="300" required placeholder="Bridge closed at Kilcullen"></label>
+          <label>From <input type="date" name="starts" required></label>
+          <label>Until (it drops off after this) <input type="date" name="ends" required></label>
+          <label>Affected area, metres across <input type="number" name="radius" min="20" max="2000" value="100" required></label>
+          <button type="submit" class="btn small">Save closure</button><p class="warn small cl-msg" role="alert"></p>
+        </form>
+        {% else %}<p class="muted small"><a href="{{ url_for('auth.login') }}">Sign in</a> to add a closure you know about.</p>{% endif %}
+      </section>
+      <section class="block" id="climbs" data-route-url="/api/routes/{{ route.id }}">
+        <h2>Climbs &amp; regroups</h2>
+        <div id="climb-list"></div>
+        <details class="scan-opts"><summary>Regroup settings</summary>
+          <div class="set-grid">
+            <label>Regroup after climbs gaining at least (m) <input type="number" id="set-gain" min="0" max="2000" step="5" inputmode="numeric"></label>
+            <label>Default regroup <select id="set-mode"><option value="ease_back">Ease back</option><option value="stop">Stop</option><option value="off">None</option></select></label>
+            <label>Ease back for (km) <input type="number" id="set-ease" min="0.5" max="10" step="0.5" inputmode="decimal"></label>
+            <label>Suggest a regroup when stops are over (km) apart <input type="number" id="set-gap" min="5" max="200" step="5" inputmode="numeric"></label>
+          </div>
+          <button type="button" class="chip" id="climb-apply">Apply to all climbs</button>
+        </details>
+        <div class="ride-actions">
+          <button type="button" class="chip" id="climb-refresh">Refresh suggestions</button>
+        </div>
+        <p class="muted small" id="climb-msg" role="status" aria-live="polite"></p>
+        <p class="muted small">Stop regroups pick a lay-by, car park, shop or church 0.2–2 km after the summit, never on the descent or a sharp bend. Run <em>Find stops</em> first so real places are used, then Refresh. Whether a spot is on a fast road or a blind junction isn't checked.</p>
+      </section>
+    </section>
+
+    <section class="pane" id="pane-share" role="tabpanel" aria-labelledby="tab-share" hidden>
+      <section class="block" id="share" data-base="/api/routes/{{ route.id }}" data-can="{{ 'no' if route.source == 'strava' else 'yes' }}" data-signed-in="{{ 'yes' if current_user else 'no' }}">
+        <h2>Share this ride</h2>
+        <p class="muted small">Anyone with the link can see the plan, with no sign-in. The warnings and weather on it are always current. It never shows your Strava data.</p>
+        <div id="share-state" class="small"></div>
+        <p class="actions">
+          <button type="button" class="btn small" id="share-create" hidden>Create a share link</button>
+          <button type="button" class="chip" id="share-copy" hidden>Copy the link</button>
+          <button type="button" class="chip" id="share-stop" hidden>Stop sharing</button>
+        </p>
+        <p class="actions">
+          <a class="chip" href="{{ url_for('share.sheet', route_id=route.id) }}">Preview the ride sheet</a>
+          <a class="chip" href="{{ url_for('share.card', route_id=route.id) }}">Cue card (PDF)</a>
+          <button type="button" class="chip" id="share-wa">Copy summary for WhatsApp</button>
+        </p>
+        <p class="muted small" id="share-msg" role="status" aria-live="polite"></p>
+      </section>
+      <section class="block" id="cyql" data-gpx="{{ url_for('main.export_download', route_id=route.id, device_key='gpx', fmt='gpx') }}" data-summary="{{ url_for('share.summary', route_id=route.id) }}" data-ride="{{ url_for('main.get_ride', route_id=route.id) }}">
+        <h2>Create this ride in Cyql</h2>
+        <p class="muted small">Cyql runs the club: members, sign-ups, messages and cancelling a ride. Plan the ride here, then create it there with these details. Nothing is sent to Cyql from this page.</p>
+        <dl class="cyql-fields" id="cyql-fields"><div><dt>Loading…</dt><dd></dd></div></dl>
+        <p class="actions">
+          <a class="btn small" id="cyql-gpx" href="#" download>Download the GPX</a>
+          <button type="button" class="chip" id="cyql-copy-desc">Copy the ride description</button>
+        </p>
+        <p class="muted small" id="cyql-msg" role="status" aria-live="polite"></p>
+        <p class="muted small">Cyql asks for ride type, start time and place, a route (GPX), and an estimated distance and speed. Cues in the GPX are plain points and Cyql may not show them: the ride-sheet link in the description carries them.</p>
+      </section>
+      <form method="post" action="{{ url_for('main.delete', route_id=route.id) }}" onsubmit="return confirm('Delete this route?')" class="danger-zone">
+        {{ csrf_input() }}
+        <button class="btn ghost" type="submit">Delete route</button>
+      </form>
+    </section>
+  </div>
+</div>
+
+{% if route.source == 'strava' %}<p class="attrib muted">{% include "_strava_powered.html" %}</p>{% endif %}
+<p class="attrib muted">Map and stop data © OpenStreetMap contributors (ODbL)</p>
+<script src="{{ url_for('static', filename='route.js') }}"></script>
+<script src="{{ url_for('static', filename='panel.js') }}"></script>
+<script src="{{ url_for('static', filename='ride.js') }}"></script>
+<script src="{{ url_for('static', filename='climbs.js') }}"></script>
+<script src="{{ url_for('static', filename='editor.js') }}"></script>
+<script src="{{ url_for('static', filename='conditions.js') }}"></script>
+<script src="{{ url_for('static', filename='share.js') }}"></script>
+<script src="{{ url_for('static', filename='mapui.js') }}"></script>
+<script src="{{ url_for('static', filename='leader.js') }}"></script>
+<script src="{{ url_for('static', filename='cyql.js') }}"></script>
+<nav class="actionbar" aria-label="Quick actions">
+  <a href="#pane-stops" data-pane="pane-stops">Stops</a>
+  <a href="{{ url_for('main.export_page', route_id=route.id) }}" class="go">Export</a>
+  <a href="#pane-share" data-pane="pane-share">Share</a>
+</nav>
+{% endblock %}

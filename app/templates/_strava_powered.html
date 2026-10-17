@@ -1,0 +1,6 @@
+{# Official "Powered by Strava" mark, unmodified. Black on the light theme, white on the dark one. Kept small so it never
+   outranks the app's own name (Strava brand rule 2). #}
+<picture class="logo-strava">
+  <source media="(prefers-color-scheme: dark)" srcset="{{ url_for('static', filename='strava/powered_by_strava_white.svg') }}">
+  <img src="{{ url_for('static', filename='strava/powered_by_strava_black.svg') }}" alt="Powered by Strava" height="16" width="158">
+</picture>

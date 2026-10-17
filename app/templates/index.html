@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+{% if next_ride %}
+<a class="upnext" href="{{ url_for('main.show', route_id=next_ride.id) }}">
+  <span class="un-date" aria-hidden="true"><b>{{ next_ride.ride.date.strftime('%d') }}</b><small>{{ next_ride.ride.date.strftime('%b') }}</small></span>
+  <span class="un-main">
+    <span class="eyebrow">Up next · {% if days_to_next == 0 %}today{% elif days_to_next == 1 %}tomorrow{% else %}in {{ days_to_next }} days{% endif %}</span>
+    <strong>{{ next_ride.title }}</strong>
+    <span class="muted">{{ next_ride.ride.date.strftime('%A') }} at {{ next_ride.ride.start_time.strftime('%H:%M') }} · {{ '%.0f' % (next_ride.length_m / 1000) }} km{% if next_ride.ride.meeting_name %} · {{ next_ride.ride.meeting_name }}{% endif %}</span>
+  </span>
+  <span class="un-go">Open the plan</span>
+</a>
+{% endif %}
+<section class="card">
+  <h1>Plan a spin</h1>
+  <p class="muted">Start with a route. Drop in a GPX file{% if strava_enabled %}, or <a href="{{ url_for('strava.home') }}">bring one in from your Strava</a>{% endif %}. Then pick the day, tick the stops, and send the group the plan.</p>
+  {% if not current_user %}<p class="muted small"><a href="{{ url_for('auth.login') }}">Sign in</a> to keep your routes private to you.</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="{{ url_for('main.upload') }}" enctype="multipart/form-data" class="upload">
+    {{ csrf_input() }}
+    <label class="dropzone" id="dropzone">
+      <svg viewBox="0 0 48 48" width="40" height="40" aria-hidden="true"><path d="M24 33V13M16 21l8-8 8 8M10 37h28" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="dz-text"><strong>Drop a GPX file here</strong><span class="muted small" id="dz-name">or choose one from your device</span></span>
+      <input type="file" name="gpx" accept=".gpx,application/gpx+xml" required>
+    </label>
+    <button type="submit" class="btn">Upload route</button>
+  </form>
+</section>
+
+{% if routes %}
+<section class="card">
+  <h2>Your routes</h2>
+  <ul class="routes">
+    {% for r in routes %}
+    <li>
+      <a href="{{ url_for('main.show', route_id=r.id) }}">
+        <span class="r-title"><strong>{{ r.title }}</strong>
+          {% if r.source == 'strava' %}<span class="badge">Strava</span>{% elif r.visibility == 'club' %}<span class="badge">Club</span>{% endif %}</span>
+        <span class="muted">{{ '%.1f' % (r.length_m / 1000) }} km{% if r.ascent_m is not none %} · {{ r.ascent_m | round | int }} m climbing{% endif %}</span>
+        {% if r.ride %}
+          {% set past = r.ride.date < today %}
+          <span class="r-when {{ 'past' if past else 'soon' }}">{{ r.ride.date.strftime('%a %d %b') }}, {{ r.ride.start_time.strftime('%H:%M') }}{% if past %} · date has passed{% endif %}</span>
+        {% endif %}
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% else %}
+<section class="card">
+  <h2>How a ride comes together</h2>
+  <ol class="steps">
+    <li><strong>Route.</strong> Upload a GPX file or import from Strava.</li>
+    <li><strong>Day.</strong> The forecast and any weather warnings show for the day you pick.</li>
+    <li><strong>Stops.</strong> Find cafés, water, toilets and defibrillators along the line and tick what goes on the device.</li>
+    <li><strong>Send.</strong> Export to Garmin, Wahoo or Karoo, and share the ride sheet with the group.</li>
+  </ol>
+</section>
+{% endif %}
+<script src="{{ url_for('static', filename='home.js') }}"></script>
+{% endblock %}

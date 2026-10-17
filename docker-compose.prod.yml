@@ -1,0 +1,123 @@
+# Production stack. Used on the server by deploy/deploy.sh; not for development (use docker-compose.yml).
+#
+#   APP_IMAGE=ghcr.io/johnruddy/rideleader:<sha> HOURS_IMAGE=ghcr.io/johnruddy/rideleader-hours:<sha> \
+#     docker compose -f docker-compose.prod.yml up -d
+#
+# Nothing here publishes a port. The shared Caddy on the server (the one that already serves checkmysitemap.com)
+# reaches the web container over the external Docker network "edge" as rideleader-web:8431 and does the HTTPS.
+name: rideleader
+
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+x-app-env: &appenv
+  DATABASE_URL: postgresql+psycopg://rlk:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/rlk
+  REDIS_URL: redis://redis:6379/0
+  HOURS_URL: http://hours:3000
+  RLK_ENV: production
+  SESSION_COOKIE_SECURE: "1"
+  TRUST_PROXY: "1"
+  DEV_SHOW_LOGIN_LINK: "0"
+  APP_BASE_URL: ${APP_BASE_URL:?Set APP_BASE_URL in .env}
+  SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+  TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:?Set TOKEN_ENCRYPTION_KEY in .env}
+  TILE_URL: ${TILE_URL:-https://tile.openstreetmap.org/{z}/{x}/{y}.png}
+  OVERPASS_URL: ${OVERPASS_URL:-https://overpass-api.de/api/interpreter}
+  OVERPASS_MIN_INTERVAL: ${OVERPASS_MIN_INTERVAL:-1.0}
+  OVERPASS_WORKERS: ${OVERPASS_WORKERS:-1}
+  BROUTER_URL: ${BROUTER_URL:-https://brouter.de/brouter}
+  BROUTER_MIN_INTERVAL: ${BROUTER_MIN_INTERVAL:-1.0}
+  STRAVA_MODE: ${STRAVA_MODE:-off}
+  STRAVA_CLIENT_ID: ${STRAVA_CLIENT_ID:-}
+  STRAVA_CLIENT_SECRET: ${STRAVA_CLIENT_SECRET:-}
+  STRAVA_VERIFY_TOKEN: ${STRAVA_VERIFY_TOKEN:-}
+  STRAVA_SUBSCRIPTION_ID: ${STRAVA_SUBSCRIPTION_ID:-}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  MAIL_FROM: ${MAIL_FROM:-Ride Leader Kit <no-reply@localhost>}
+  CONTROLLER_NAME: ${CONTROLLER_NAME:-}
+  CONTROLLER_CONTACT: ${CONTROLLER_CONTACT:-}
+  APP_COMMIT: ${APP_COMMIT:-}
+
+services:
+  db:
+    <<: *logging
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rlk
+      POSTGRES_DB: rlk
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rlk -d rlk"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    <<: *logging
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+
+  hours:
+    <<: *logging
+    image: ${HOURS_IMAGE:?Set HOURS_IMAGE}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 10s
+      retries: 10
+
+  web:
+    <<: *logging
+    image: ${APP_IMAGE:?Set APP_IMAGE}
+    restart: unless-stopped
+    environment: *appenv
+    networks:
+      default: {}
+      edge:
+        aliases: [rideleader-web]
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      hours: {condition: service_healthy}
+
+  worker:
+    <<: *logging
+    image: ${APP_IMAGE:?Set APP_IMAGE}
+    restart: unless-stopped
+    command: ["rq", "worker", "--url", "redis://redis:6379/0"]
+    environment: *appenv
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+
+  scheduler:
+    <<: *logging
+    image: ${APP_IMAGE:?Set APP_IMAGE}
+    restart: unless-stopped
+    command: ["python", "-m", "app.scheduler"]
+    environment: *appenv
+    depends_on:
+      db: {condition: service_healthy}
+
+networks:
+  edge:
+    external: true
+    name: edge
+
+volumes:
+  pgdata:
+  redisdata:

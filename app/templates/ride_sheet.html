@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}{{ s.title }} · {{ s.date_long }}{% endblock %}
+{% block head %}
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<link rel="stylesheet" href="{{ url_for('static', filename='sheet.css') }}">
+{% endblock %}
+
+{% macro warning_banner(b, leader) %}
+<div class="warn-banner {{ 'lv-unreachable' if b.status == 'unreachable' else ('lv-' ~ b.top_level if b.top_level else 'lv-none') }}" role="region" aria-label="Met Éireann weather warnings">
+  {% if b.status == 'unreachable' %}
+    <p class="wb-msg">{{ b.message }}</p>
+    <p class="small"><a href="{{ b.url }}" rel="noopener noreferrer">met.ie/warnings</a></p>
+  {% endif %}
+  {% if b.status == 'ok' and not b.warnings %}
+    <p class="wb-msg">No Met Éireann weather warnings for this ride.</p>
+  {% endif %}
+  {% for w in b.warnings %}
+  <article class="wb-item lv-{{ w.level }}">
+    <h2>{{ w.level | upper }}: {{ w.level_title }}, {{ w.instruction }}</h2>
+    <p class="wb-headline">{{ w.headline }}</p>
+    <p class="small">{{ w.type }} · {{ w.counties | join(', ') }} · issued {{ w.issued }} · valid {{ w.valid_from }} to {{ w.valid_to }}</p>
+    <div class="wb-desc">{{ w.description_html | safe }}</div>
+    <p class="small"><a href="{{ w.url }}" rel="noopener noreferrer">Full warning on met.ie</a></p>
+  </article>
+  {% endfor %}
+  {% if leader and b.postpone_prompt %}
+  <div class="wb-postpone"><strong>Consider postponing or changing the route.</strong> Nothing is cancelled automatically: that call is yours.</div>
+  {% endif %}
+  <p class="small wb-attrib">{{ b.attribution }}{% if b.checked_at %} Last checked {{ b.checked_at[11:16] }} UTC.{% endif %}</p>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div id="offline" class="warn-banner lv-unreachable" hidden role="alert">
+  You're offline, so this is the copy saved when you last had signal ({{ s.generated_at }}). Weather and warnings may be out of date: check <a href="https://www.met.ie/warnings">met.ie/warnings</a> before you ride.
+</div>
+
+{# 1. warnings come first #}
+{{ warning_banner(s.banner, not public) }}
+
+{% if s.notes %}
+<section class="card leader-word" aria-label="A word from your ride leader">
+  <p class="eyebrow">A word from your ride leader</p>
+  <p class="lw-text">{{ s.notes }}</p>
+</section>
+{% endif %}
+
+<section class="card sheet">
+  <h1>{{ s.title }}</h1>
+  <p class="sheet-when"><strong>{{ s.date_long }}</strong>, meet <strong>{{ s.meeting.name }}</strong> at <strong>{{ s.start_time }}</strong>
+    · <a href="{{ s.meeting.map_url }}" rel="noopener noreferrer">meeting point on a map</a></p>
+  <dl class="stats">
+    <div><dt>Distance</dt><dd>{{ s.distance_km }} km</dd></div>
+    <div><dt>Climbing</dt><dd>{{ (s.ascent_m ~ ' m') if s.ascent_m is not none else 'n/a' }}</dd></div>
+    <div><dt>Descent</dt><dd>{{ (s.descent_m ~ ' m') if s.descent_m is not none else 'n/a' }}</dd></div>
+  </dl>
+  {% if s.leader_phone %}<p>Ride leader: <a href="tel:{{ s.leader_phone | replace(' ', '') }}"><strong>{{ s.leader_phone }}</strong></a></p>{% endif %}
+  <p class="noprint actions">
+    <button type="button" class="btn small" id="copy-wa">Copy summary for WhatsApp</button>
+    <a class="btn small link alt" href="{{ base }}/cue-card.pdf">Cue card (PDF)</a>
+    <button type="button" class="btn small alt" onclick="window.print()">Print</button>
+  </p>
+  <pre id="wa-text" hidden>{{ wa_text }}</pre>
+  <p class="muted small" id="copy-msg" role="status"></p>
+</section>
+
+<section class="card sheet">
+  <h2>Pace groups</h2>
+  <div class="tablewrap"><table class="sheet-table">
+    <thead><tr><th>Group</th><th>Speed</th><th>Stop</th><th>Ride time</th><th>Back about</th></tr></thead>
+    <tbody>{% for g in s.groups %}<tr><td><strong>{{ g.name }}</strong></td><td>{{ '%g' % g.speed_kmh }} km/h</td><td>{{ g.stop_min }} min each</td><td>{{ g.ride_time }}</td><td><strong>{{ g.finish }}</strong></td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% for note in s.daylight.warnings %}<p class="wx-flag">🔦 {{ note }}</p>{% endfor %}
+  {% if s.daylight.sunrise %}<p class="small muted">Sunrise {{ s.daylight.sunrise }} · Sunset {{ s.daylight.sunset }}</p>{% endif %}
+</section>
+
+<section class="card sheet">
+  <h2>The route</h2>
+  {{ s.map_svg }}
+  {% if s.profile_svg %}{{ s.profile_svg }}{% endif %}
+  <p class="small muted legend"><span class="lg" style="background:#34c759">S</span> start · <span class="lg" style="background:#1d1d1f">F</span> finish · <span class="lg sq" style="background:#0a84ff">R</span> regroup · ▲ hazard · <span style="color:#d70015">- - -</span> closure · pale red bands on the profile are climbs</p>
+</section>
+
+<section class="card sheet">
+  <h2>Stops and regroups</h2>
+  {% if s.stops %}
+  <ol class="stoplist">
+    {% for st in s.stops %}
+    <li class="{{ 'rg' if st.kind == 'regroup' else '' }}">
+      <span class="km">km {{ st.km }}</span>
+      <div><strong>{{ st.name }}</strong>
+        {% if st.club %}<span class="badge">club</span>{% endif %}
+        {% if st.planned_stop %}<span class="badge">planned stop</span>{% endif %}
+        <span class="muted small">{{ st.kind_label }}{% if st.verified_at %} · verified {{ st.verified_at[:10] }}{% endif %}</span>
+        {% if st.note %}<div class="small">{{ st.note }}</div>{% endif %}</div>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}<p class="muted">No stops chosen yet.</p>{% endif %}
+
+  {% if s.cafes or s.cafe_error %}
+  <h3>Café opening times</h3>
+  {% if s.cafe_error %}<p class="warn">{{ s.cafe_error }}</p>{% endif %}
+  {% for c in s.cafes %}
+    <div class="cafe"><strong>{{ c.name }}</strong> <span class="muted small">km {{ '%.1f' % (c.s_m / 1000) }}</span>
+      {% for g in c.groups %}<div class="hrs {{ g.status }}">Group {{ g.group }} arrives {{ g.eta }}: {{ g.label }}{% if g.status == 'closes_soon' and g.closes_at %} (closes {{ g.closes_at }}){% endif %}{% if g.status == 'closed' and g.opens_at %} (opens {{ g.opens_at }}){% endif %}</div>{% endfor %}
+      {% if c.hours %}<div class="small muted">{{ 'Club-confirmed' if c.hours_source == 'club' else 'OpenStreetMap' }} hours: {{ c.hours }}</div>{% else %}<div class="small muted">No opening hours on record: ring ahead.</div>{% endif %}
+    </div>
+  {% endfor %}
+  {% endif %}
+</section>
+
+{% if s.climbs %}
+<section class="card sheet">
+  <h2>Climbs</h2>
+  <div class="tablewrap"><table class="sheet-table">
+    <thead><tr><th>km</th><th>Length</th><th>Gain</th><th>Avg</th><th>Max</th><th>Regroup</th></tr></thead>
+    <tbody>{% for c in s.climbs %}<tr><td>{{ c.km }}{% if c.category %} <span class="badge">{{ 'HC' if c.category == 'HC' else 'Cat ' ~ c.category }}</span>{% endif %}</td><td>{{ c.length_km }} km</td><td>+{{ c.gain_m }} m</td><td>{{ c.avg }}%</td><td>{{ c.max }}%</td>
+      <td>{{ {'ease_back': 'Ease back after the top', 'stop': 'Regroup after the top', 'off': 'none'}[c.regroup] }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+{% endif %}
+
+<section class="card sheet">
+  <h2>Hazards and closures</h2>
+  {% for h in s.hazards %}<div class="hz">▲ <strong>km {{ h.km }}: {{ h.name }}</strong>{% if h.note %}<div class="small">{{ h.note }}</div>{% endif %}</div>{% endfor %}
+  {% for c in s.closures.hits %}<div class="hz cl">⛔ <strong>km {{ '%.1f' % (c.s_start / 1000) }}–{{ '%.1f' % (c.s_end / 1000) }}: {{ c.description }}</strong>
+    <div class="small">{% if c.starts_at %}from {{ c.starts_at[:10] }}{% endif %}{% if c.ends_at %} until {{ c.ends_at[:10] }}{% else %} (no end date given){% endif %}{% if c.url %} · <a href="{{ c.url }}" rel="noopener noreferrer">details</a>{% endif %}</div></div>{% endfor %}
+  {% if not s.hazards and not s.closures.hits %}<p class="muted">{% if s.closures.all_sources_ok %}No hazards or closures found.{% else %}No hazards or closures found, but not every source could be checked (see below).{% endif %}</p>{% endif %}
+  {% if s.closures.error %}<p class="warn">{{ s.closures.error }}</p>{% endif %}
+  <p class="small muted">{{ s.closures.disclaimer }}</p>
+  <details><summary>What was checked</summary>
+    {% for c in s.closures.coverage %}<p class="small"><strong>{{ c.label }}{{ '' if c.ok else ' (unavailable right now)' }}</strong><br>{{ c.coverage }}{% if c.checked_at %} Checked {{ c.checked_at[:16] | replace('T', ' ') }} UTC.{% endif %}</p>{% endfor %}
+    <p class="small"><strong>Not checked:</strong> {{ s.closures.not_checked | join('; ') }}.</p>
+  </details>
+  {% if s.road_summary %}
+  <h3>Roads and surfaces</h3>
+  <p>{{ s.road_summary.main_pct }}% on main roads · {{ s.road_summary.local_pct }}% on local roads · {{ s.road_summary.unpaved_pct }}% unpaved{% if s.road_summary.unknown_pct > 5 %} · {{ s.road_summary.unknown_pct }}% not mapped{% endif %}</p>
+  {% for b in s.road_summary.busy %}<p class="small">Busy road {{ b.ref }}: km {{ '%.1f' % (b.s0 / 1000) }}–{{ '%.1f' % (b.s1 / 1000) }}</p>{% endfor %}
+  {% endif %}
+</section>
+
+<section class="card sheet">
+  <h2>Weather</h2>
+  {% set wx = s.weather %}
+  {% if wx.available %}
+    <p class="wx-summary">{{ wx.summary }}</p>
+    {% if wx.detail and wx.detail.note %}<p class="warn small">{{ wx.detail.class }} forecast. {{ wx.detail.note }}</p>{% endif %}
+    {% if wx.flags %}<div class="wx-flags"><strong>Advisory flags (the club's, not official warnings)</strong>{% for f in wx.flags %}<div class="wx-flag">⚠ {{ f.text }}</div>{% endfor %}</div>{% endif %}
+    {% if wx.kit %}<div class="wx-kit"><strong>Kit to bring</strong>{% for k in wx.kit %}<div>• {{ k.item }} <span class="muted small">({{ k.why }})</span></div>{% endfor %}</div>{% endif %}
+    <details><summary>Along the route, group {{ wx.groups[0].name }}</summary>
+      <div class="tablewrap"><table class="sheet-table">
+        <thead><tr><th>km</th><th>time</th><th></th><th>°C</th><th>wind</th><th>rain</th></tr></thead>
+        <tbody>{% for r in wx.groups[0].samples %}{% if r.available %}<tr><td>{{ '%.0f' % (r.s_m / 1000) }}</td><td>{{ r.eta }}</td><td>{{ r.icon }}</td><td>{{ '%.0f' % r.temp_c }} ({{ '%.0f' % r.feels_c }})</td>
+          <td>{{ '%.0f' % r.wind_kmh }} {{ r.wind_from }} {{ {'head': 'headwind', 'tail': 'tailwind', 'cross': 'crosswind'}[r.wind_class] }}</td><td>{{ '%.1f' % (r.rain_mm_h or 0) }} mm/h</td></tr>{% endif %}{% endfor %}</tbody>
+      </table></div></details>
+    <p class="small muted">Forecast updated {{ wx.updated }}. {{ wx.attribution | join(' · ') }}</p>
+  {% else %}
+    <p class="muted">{{ wx.reason }}</p>
+  {% endif %}
+</section>
+
+<section class="card sheet">
+  <h2>If something goes wrong</h2>
+  <p class="emergency"><strong>{{ s.emergency }}</strong></p>
+  {% if s.leader_phone %}<p>Ride leader: <a href="tel:{{ s.leader_phone | replace(' ', '') }}">{{ s.leader_phone }}</a></p>{% endif %}
+  <h3>Nearest defibrillator by section</h3>
+  <ul class="plain">{% for sec in s.aed_sections %}<li><strong>{{ sec.label }}:</strong>
+    {% if sec['item'] %}{{ sec['item'].name }} at km {{ sec['item'].km }}, {{ '%.0f' % (sec['item'].offset_m or 0) }} m {{ 'left' if sec['item'].side == 'L' else 'right' if sec['item'].side == 'R' else 'off the route' }}{% if sec['item'].verified_at %} <span class="badge">club verified {{ sec['item'].verified_at[:10] }}</span>{% endif %}{% if sec['item'].note %} <span class="small muted">({{ sec['item'].note }})</span>{% endif %}
+    {% else %}<span class="muted">none known nearby</span>{% endif %}</li>{% endfor %}</ul>
+  <p class="small muted">{{ s.aed_note }}</p>
+  {% if s.bailouts %}<h3>Ways home</h3><ul class="plain">{% for b in s.bailouts %}<li>km {{ b.km }}: {{ b.name }} <span class="muted small">({{ '%.0f' % (b.offset_m or 0) }} m off the route)</span></li>{% endfor %}</ul>{% endif %}
+</section>
+
+{% if not public %}
+<section class="card sheet noprint">
+  <h2>Leader's checklist</h2>
+  <ul class="plain">{% for item in s.checklist %}<li><label class="check"><input type="checkbox"> <span>{{ item }}</span></label></li>{% endfor %}</ul>
+  {% if share_url %}<p>Share link: <a href="{{ share_url }}">{{ share_url }}</a></p>{% else %}<p class="muted small">Not shared yet. Create a link from the route page.</p>{% endif %}
+  <p><a href="{{ url_for('main.show', route_id=route.id) }}">← Back to the plan</a></p>
+</section>
+{% endif %}
+
+<footer class="sheet-foot small muted">
+  <p>Page made {{ s.generated_at }} ({{ s.tz }}). {{ s.attribution | join(' · ') }}</p>
+</footer>
+
+<script>
+  document.getElementById('copy-wa').addEventListener('click', async function () {
+    var t = document.getElementById('wa-text').textContent, m = document.getElementById('copy-msg');
+    try { await navigator.clipboard.writeText(t); m.textContent = 'Copied: paste it into the group.'; }
+    catch (e) { m.textContent = 'Copy this:\n' + t; }
+  });
+  if (!navigator.onLine) document.getElementById('offline').hidden = false;
+  window.addEventListener('offline', function () { document.getElementById('offline').hidden = false; });
+  window.addEventListener('online', function () { document.getElementById('offline').hidden = true; });
+  {% if public and share_url %}if ('serviceWorker' in navigator) navigator.serviceWorker.register('/r/sw.js', { scope: '/r/' }).catch(function () {});{% endif %}
+</script>
+{% endblock %}

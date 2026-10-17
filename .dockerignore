@@ -1,0 +1,14 @@
+.git
+.github
+.env
+.env.*
+.pytest_cache
+__pycache__
+*.pyc
+_probe
+docs
+infra
+deploy
+hours/node_modules
+node_modules
+*.pptx

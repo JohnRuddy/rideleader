@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Check your email · Ride Leader Kit{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Check your email</h1>
+  <p>If <strong>{{ email }}</strong> is right, a sign-in link is on its way. It works once and expires in 15 minutes.</p>
+  {% if dev_link %}
+  <p class="warn small">Development mode: no email service is set up, so here is the link instead. <a href="{{ dev_link }}">Sign in</a></p>
+  {% endif %}
+</section>
+{% endblock %}

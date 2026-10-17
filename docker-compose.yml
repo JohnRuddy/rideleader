@@ -1,0 +1,128 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: rlk
+      POSTGRES_PASSWORD: rlk_dev_only
+      POSTGRES_DB: rlk
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rlk -d rlk"]
+      interval: 3s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      retries: 20
+  hours:
+    build: ./hours
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 3s
+      retries: 20
+  web:
+    build: {context: ., args: {INSTALL_DEV: "true"}}
+    command: ["flask", "--app", "app", "run", "--host", "0.0.0.0", "--port", "8431", "--debug"]
+    # Windows reserves whole port ranges after a restart (7781-8480 at the time of writing), which silently breaks fixed ports
+    ports: ["${RLK_PORT:-9431}:8431"]
+    environment: &appenv
+      DATABASE_URL: postgresql+psycopg://rlk:rlk_dev_only@db:5432/rlk
+      REDIS_URL: redis://redis:6379/0
+      TILE_URL: ${TILE_URL:-https://tile.openstreetmap.org/{z}/{x}/{y}.png}
+      OVERPASS_URL: ${OVERPASS_URL:-https://overpass-api.de/api/interpreter}
+      OVERPASS_MIN_INTERVAL: ${OVERPASS_MIN_INTERVAL:-1.0}
+      OVERPASS_WORKERS: ${OVERPASS_WORKERS:-1}
+      BROUTER_URL: ${BROUTER_URL:-https://brouter.de/brouter}
+      BROUTER_MIN_INTERVAL: ${BROUTER_MIN_INTERVAL:-1.0}
+      HOURS_URL: http://hours:3000
+      STRAVA_MODE: ${STRAVA_MODE:-mock}
+      APP_BASE_URL: ${APP_BASE_URL:-}
+      SECRET_KEY: ${SECRET_KEY:-dev-only-change-me}
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:-}
+      STRAVA_CLIENT_ID: ${STRAVA_CLIENT_ID:-}
+      STRAVA_CLIENT_SECRET: ${STRAVA_CLIENT_SECRET:-}
+      STRAVA_VERIFY_TOKEN: ${STRAVA_VERIFY_TOKEN:-}
+      STRAVA_SUBSCRIPTION_ID: ${STRAVA_SUBSCRIPTION_ID:-}
+      RLK_ENV: ${RLK_ENV:-dev}
+    volumes: [".:/srv"]
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      hours: {condition: service_healthy}
+  worker:
+    build: {context: ., args: {INSTALL_DEV: "true"}}
+    command: ["rq", "worker", "--url", "redis://redis:6379/0"]
+    environment: *appenv
+    volumes: [".:/srv"]
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+  scheduler:
+    build: {context: ., args: {INSTALL_DEV: "true"}}
+    command: ["python", "-m", "app.scheduler"]
+    environment: *appenv
+    volumes: [".:/srv"]
+    depends_on:
+      db: {condition: service_healthy}
+
+  # ---- our own map servers (profile "maps": nothing below starts or downloads until you ask for it) ----
+  # See README "Local map servers". Start with:  docker compose --profile maps up -d --build
+  brouter-segments:           # one-shot: puts the Irish routing tiles in the shared volume, skipping any already there
+    profiles: ["maps"]
+    image: curlimages/curl:8.10.1
+    user: root
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        set -e
+        for t in W10_N50 W15_N50 W10_N55; do
+          if [ ! -s /segments4/$$t.rd5 ]; then
+            curl -fL --retry 3 -o /segments4/$$t.rd5.part https://brouter.de/brouter/segments4/$$t.rd5
+            mv /segments4/$$t.rd5.part /segments4/$$t.rd5
+          fi
+        done
+        ls -la /segments4
+    volumes: [brouter-segments:/segments4]
+    restart: "no"
+  brouter:
+    profiles: ["maps"]
+    build: ./infra/brouter
+    volumes: [brouter-segments:/segments4:ro]
+    depends_on:
+      brouter-segments: {condition: service_completed_successfully}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs 'http://127.0.0.1:17777/brouter?lonlats=-6.9,53.16%7C-6.89,53.165&profile=fastbike&alternativeidx=0&format=geojson' >/dev/null"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+  overpass:
+    profiles: ["maps"]
+    image: wiktorn/overpass-api:latest
+    environment:
+      OVERPASS_MODE: init
+      # Geofabrik's Ireland + Northern Ireland extract is a .pbf; Overpass loads .osm.bz2, so convert it after download.
+      OVERPASS_PLANET_URL: https://download.geofabrik.de/europe/ireland-and-northern-ireland-latest.osm.pbf
+      OVERPASS_PLANET_PREPROCESS: "mv /db/planet.osm.bz2 /db/planet.osm.pbf && osmium cat -o /db/planet.osm.bz2 /db/planet.osm.pbf && rm /db/planet.osm.pbf"
+      OVERPASS_DIFF_URL: https://download.geofabrik.de/europe/ireland-and-northern-ireland-updates/
+      OVERPASS_UPDATE_SLEEP: "3600"
+      OVERPASS_META: "no"
+      OVERPASS_COMPRESSION: lz4
+      OVERPASS_RULES_LOAD: "10"
+      OVERPASS_STOP_AFTER_INIT: "false"
+    volumes: [overpass-db:/db]
+    restart: unless-stopped
+    healthcheck:
+      # /db ships owner-only, which stops the web server reaching the database socket: open it up (idempotent), then check.
+      test: ["CMD-SHELL", "chmod 755 /db; curl -fs http://127.0.0.1/api/status | grep -q 'Connected as'"]
+      interval: 30s
+      timeout: 10s
+      retries: 40
+      start_period: 120s
+volumes:
+  pgdata:
+  overpass-db:
+  brouter-segments:

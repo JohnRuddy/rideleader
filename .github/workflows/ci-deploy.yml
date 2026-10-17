@@ -1,0 +1,215 @@
+# Continuous integration and deployment.
+#
+#   pull request          -> test, lint, secret scan
+#   push to main          -> the same, then build images, push to GHCR, deploy to the server
+#   manual run            -> same as a push to main
+#
+# Deploy needs these secrets on the "production" environment (Settings -> Environments -> production):
+#   DEPLOY_HOST         server IP or hostname
+#   DEPLOY_SSH_KEY      private key for the 'deploy' user (a key made for this repo only)
+#   DEPLOY_KNOWN_HOSTS  output of `ssh-keyscan <host>` (pins the server's host key)
+#   PROD_ENV            full contents of the server's .env (see deploy/make-env.sh); never committed
+# Repository variables: DEPLOY_ENABLED=true turns the deploy job on; PUBLIC_URL=https://<domain> adds a smoke test.
+name: CI / Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start the database, cache and opening-hours service
+        run: docker compose up -d --wait db redis hours
+      - name: Create the test database
+        run: docker compose exec -T db psql -U rlk -d rlk -c "CREATE DATABASE rlk_test"
+      - name: Build the app image (with test tools)
+        run: docker compose build web
+      - name: Run the tests
+        run: docker compose run --rm -e TEST_DATABASE_URL=postgresql+psycopg://rlk:rlk_dev_only@db:5432/rlk_test web pytest -q -W ignore
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python: syntax errors and undefined names
+        run: |
+          pip install ruff==0.6.9
+          ruff check app tests --select E9,F63,F7,F82 --output-format=github
+      - name: JavaScript: syntax
+        run: |
+          fail=0
+          for f in app/static/*.js hours/server.js; do node --check "$f" || fail=1; done
+          exit $fail
+      - name: Shell scripts
+        run: |
+          sudo apt-get install -y shellcheck >/dev/null
+          shellcheck -S warning deploy/*.sh
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan the whole history for committed secrets
+        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest detect --source /repo --no-banner --redact --verbose
+
+  build:
+    needs: [test, lint, secrets]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      app: ${{ steps.names.outputs.app }}
+      hours: ${{ steps.names.outputs.hours }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: names
+        run: |
+          repo="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "app=${repo}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "hours=${repo}-hours:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.names.outputs.app }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          build-args: |
+            APP_COMMIT=${{ github.sha }}
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,scope=app,mode=max
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./hours
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.names.outputs.hours }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=hours
+          cache-to: type=gha,scope=hours,mode=max
+
+  deploy:
+    needs: build
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.PUBLIC_URL }}
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: read
+    env:
+      APP_DIR: /opt/rideleader
+      APP_IMAGE: ${{ needs.build.outputs.app }}
+      HOURS_IMAGE: ${{ needs.build.outputs.hours }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check deploy configuration
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          PROD_ENV: ${{ secrets.PROD_ENV }}
+        run: |
+          missing=0
+          for name in DEPLOY_HOST DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS PROD_ENV; do
+            if [ -z "${!name}" ]; then echo "::error::Secret $name is not set on the production environment"; missing=1; fi
+          done
+          exit $missing
+
+      - name: Configure SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER || 'deploy' }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT || '22' }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host server
+            HostName $DEPLOY_HOST
+            User $DEPLOY_USER
+            Port $DEPLOY_PORT
+            IdentityFile ~/.ssh/id_deploy
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+            ServerAliveInterval 30
+            ConnectTimeout 20
+            ConnectionAttempts 5
+          EOF
+
+      - name: Wait until the server accepts SSH
+        run: |
+          for attempt in $(seq 1 10); do
+            if ssh server true; then echo "SSH reachable (attempt $attempt)."; exit 0; fi
+            echo "SSH not reachable yet (attempt $attempt); retrying in 20s."; sleep 20
+          done
+          echo "Server unreachable over SSH." >&2; exit 1
+
+      - name: Upload compose file, deploy scripts and production config
+        env:
+          PROD_ENV: ${{ secrets.PROD_ENV }}
+        run: |
+          tar czf - docker-compose.prod.yml deploy | ssh server "mkdir -p '$APP_DIR' && tar xzf - -C '$APP_DIR'"
+          printf '%s\n' "$PROD_ENV" | tr -d '\r' | ssh server "umask 077 && cat > '$APP_DIR/.env'"
+
+      - name: Log the server in to GHCR (the token expires when this job ends)
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: printf '%s' "$GHCR_TOKEN" | ssh server "docker login ghcr.io -u '$GHCR_USER' --password-stdin" >/dev/null
+
+      - name: Deploy
+        run: ssh server "cd '$APP_DIR' && bash deploy/deploy.sh '$APP_IMAGE' '$HOURS_IMAGE'"
+
+      - name: Log the server out of GHCR
+        if: always()
+        run: ssh server "docker logout ghcr.io" >/dev/null 2>&1 || true
+
+      - name: Smoke test (the public URL serves this build)
+        if: vars.PUBLIC_URL != ''
+        env:
+          PUBLIC_URL: ${{ vars.PUBLIC_URL }}
+        run: |
+          expected="${GITHUB_SHA:0:7}"
+          for attempt in $(seq 1 12); do
+            body=$(curl --fail --silent --show-error "$PUBLIC_URL/healthz" || true)
+            echo "attempt $attempt: $body"
+            case "$body" in *"\"build\":\"$expected\""*) echo "Live and serving build $expected"; exit 0;; esac
+            sleep 8
+          done
+          echo "::error::$PUBLIC_URL is not serving build $expected"; exit 1

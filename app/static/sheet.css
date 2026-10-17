@@ -1,0 +1,27 @@
+/* The ride sheet is read outdoors on a phone: big type, strong contrast, tables that scroll inside themselves. */
+.sheet { font-size: 1.05rem; line-height: 1.5; }
+.sheet h2 { font-size: 1.25rem; margin: 0 0 8px; } .sheet h3 { font-size: 1.05rem; margin: 14px 0 6px; }
+.sheet-when { font-size: 1.15rem; }
+.sheet-map, .sheet-profile { width: 100%; height: auto; display: block; margin: 8px 0; }
+.sheet-table { border-collapse: collapse; width: 100%; font-size: .95rem; }
+.sheet-table th, .sheet-table td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); white-space: nowrap; }
+.stoplist { list-style: none; margin: 0; padding: 0; }
+.stoplist li { display: flex; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.stoplist li:first-child { border-top: 0; } .stoplist .km { flex: 0 0 4.2rem; font-weight: 700; }
+.stoplist li.rg .km { color: #0a84ff; }
+.cafe { padding: 8px 0; border-top: 1px solid var(--line); } .cafe:first-of-type { border-top: 0; }
+.hz { padding: 8px 0; border-top: 1px solid var(--line); } .hz.cl { color: #d70015; }
+.plain { list-style: none; padding: 0; margin: 0; } .plain li { padding: 4px 0; }
+.emergency { font-size: 1.3rem; } .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.legend .lg { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; color: #fff; font-weight: 700; font-size: .7rem; }
+.legend .lg.sq { border-radius: 4px; }
+.sheet-foot { padding: 0 4px 24px; }
+@media (prefers-color-scheme: dark) { .sheet-map rect:first-child, .sheet-profile rect:first-child { fill: #2c2c2e; } }
+@media print {
+  body { background: #fff !important; color: #000 !important; font-size: 11pt; }
+  .noprint, .top, .foot, #offline { display: none !important; }
+  .card { background: #fff !important; border: 1px solid #999; border-radius: 0; break-inside: avoid; padding: 8px 10px; margin: 0 0 8px; }
+  main { display: block; max-width: none; padding: 0; }
+  a { color: #000; text-decoration: none; }
+  .warn-banner { border: 2px solid #000; }
+}

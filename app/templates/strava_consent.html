@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Connect Strava · Ride Leader Kit{% endblock %}
+{% block content %}
+<section class="card prose">
+  <h1>Connect your Strava</h1>
+  {% if strava_mode == 'mock' %}<p class="warn small">Development mode: this connects to a pretend Strava athlete with sample routes. No real Strava account is involved.</p>{% endif %}
+  <p>Bring a route you've made on Strava into Ride Leader Kit so you can add cafés, regroups and stops and export it to your bike computer. Here's exactly what that involves.</p>
+
+  <h2>What we read</h2>
+  <ul>
+    <li>The <strong>list of your routes</strong> (name, distance, climbing and a small outline), including <strong>private</strong> routes if you allow it on Strava.</li>
+    <li>The <strong>route file</strong> for any route you choose to import.</li>
+    <li>Your <strong>Strava athlete number</strong>, so we can tell which routes are yours.</li>
+  </ul>
+  <h2>How</h2>
+  <p>You'll approve access on Strava's own page. It is <strong>read-only</strong>: we can't create, change or delete anything on Strava.</p>
+  <h2>How long, and who sees it</h2>
+  <p>We keep it for <strong>at most 7 days</strong>, then it's deleted automatically. <strong>Only you</strong> can see it here. If you want a route to stay, you can share your own copy with your club (you'll be asked to confirm it's yours).</p>
+  <h2>Changing your mind</h2>
+  <ul>
+    <li><strong>Withdraw consent:</strong> press <em>Disconnect Strava</em> on your <a href="{{ url_for('account.account') }}">account page</a>, or remove the app in your Strava settings. Either way your Strava data is deleted and we email you to confirm.</li>
+    <li><strong>Ask for deletion:</strong> use <em>Delete my account</em> on the same page, or contact the club.</li>
+  </ul>
+
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="{{ url_for('strava.connect_post') }}" class="stack">
+    {{ csrf_input() }}
+    <label class="check"><input type="checkbox" name="consent" value="yes" required> <span>{{ consent_text }}</span></label>
+    {% if strava_brand.connect_img %}
+      <button type="submit" class="imgbtn" aria-label="Connect with Strava"><img src="{{ url_for('static', filename='strava/connect_with_strava_orange.svg') }}" srcset="{{ url_for('static', filename='strava/connect_with_strava_orange.svg') }} 1x, {{ url_for('static', filename='strava/connect_with_strava_orange_x2.svg') }} 2x" alt="Connect with Strava" height="48" width="237"></button>
+    {% else %}
+      <button type="submit" class="btn">Connect with Strava</button>
+      {% if strava_mode != 'live' %}<p class="muted small">(Stand-in button. Strava's brand rules require its official "Connect with Strava" artwork, which must be added before real use. See README.)</p>{% endif %}
+    {% endif %}
+  </form>
+  <p class="muted small">No thanks? <a href="{{ url_for('main.index') }}">Carry on without Strava</a>. Everything else works the same.</p>
+</section>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Share with your club · Ride Leader Kit{% endblock %}
+{% block content %}
+<section class="card prose">
+  <p><a href="{{ url_for('main.show', route_id=route.id) }}">← Back to the route</a></p>
+  <h1>Share “{{ route.title }}” with your club</h1>
+  <p>This route came from your Strava, so only you can see it and it will be deleted on {{ route.strava_expires_at.strftime('%d %b %Y') }}. If you share it, we make a <strong>separate copy</strong> that you own, stored as a route file with no link back to Strava. It stays until you delete it, and other club members can see it.</p>
+  <p class="muted small">The copy keeps the line (with any changes you've made) and the stops and regroups you added. Anything that only came from Strava's file, such as its own waypoints, is left out.</p>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="{{ url_for('strava.publish_post', route_id=route.id) }}" class="stack">
+    {{ csrf_input() }}
+    <label class="check"><input type="checkbox" name="confirm_own" value="yes" required> <span>{{ consent_text }}</span></label>
+    <button type="submit" class="btn">Share with my club</button>
+  </form>
+</section>
+{% endblock %}

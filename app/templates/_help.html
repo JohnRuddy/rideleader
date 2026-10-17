@@ -1,0 +1,103 @@
+<dialog class="help" id="help" aria-labelledby="help-title">
+  <div class="help-head">
+    <h2 id="help-title">How Ride Leader Kit works</h2>
+    <button type="button" class="help-x" data-close-help aria-label="Close help">×</button>
+  </div>
+  <div class="help-body">
+    <p class="help-lead">Plan a club ride from a route file, check the café and the weather, and put the stops on your head unit. Each section opens on its own.</p>
+
+    <details open>
+      <summary>Planning a ride in five steps</summary>
+      <ol>
+        <li><strong>Get a route in.</strong> Upload a GPX file from the home page, or connect Strava and import one of your routes.</li>
+        <li><strong>Pick the day and start time.</strong> The strip under the map shows the forecast for the next days. Weekends and your club's usual day are marked.</li>
+        <li><strong>Find stops.</strong> Press <em>Find stops along route</em> for cafés, water, toilets, defibrillators, service stations and historic sites near the line.</li>
+        <li><strong>Choose what goes on the device.</strong> Tick a stop to include it in the export. Faded dots on the map are candidates; solid dots are ticked.</li>
+        <li><strong>Export or share.</strong> Use <em>Export…</em> for Garmin, Wahoo, Karoo or a plain GPX, and the ride sheet for the group.</li>
+      </ol>
+    </details>
+
+    <details>
+      <summary>The “Ready to ride?” card</summary>
+      <p>The card at the top of a route gathers what a leader checks before saying the ride is on: the day, meeting point, weather warnings, forecast, daylight, closures, the stops going on the device and whether the cafés are open when the group arrives. <strong>Fix</strong> means something is wrong, <strong>Check</strong> means look at it, <strong>Unknown</strong> means we couldn't check (that is never the same as fine). Press <em>Go</em> to jump to the part of the page that fixes it. The tools beside the map are in four tabs: <strong>Checks</strong>, <strong>Stops</strong>, <strong>Conditions</strong> and <strong>Share</strong>. On a phone, the bar along the bottom opens Stops, Export and Share.</p>
+    </details>
+
+    <details>
+      <summary>Bringing in a route (GPX or Strava)</summary>
+      <p><strong>GPX.</strong> Any track from a bike computer, Komoot, RideWithGPS or similar. Routes you upload are private to you.</p>
+      <p><strong>Strava.</strong> Connecting gives this app read-only access to your routes; it can't change anything on Strava. Private routes need the extra permission Strava asks about when you connect. Imported routes are visible only to you and are deleted automatically after 7 days, or straight away if you disconnect. To share one with the club, use <em>Share a copy with your club</em> on the route page, which makes a separate copy you own.</p>
+      <p><strong>Getting cues back onto Strava.</strong> Strava lets apps read routes but not create or edit them. On an imported route, <em>Send cues back to Strava…</em> gives you a GPX with your ticked cues to upload on Strava yourself. Strava decides which cues it keeps; they all stay in the file for your head unit.</p>
+      <p class="help-links"><a href="https://support.strava.com/" target="_blank" rel="noopener noreferrer">Strava Support</a></p>
+    </details>
+
+    <details>
+      <summary>Finding and choosing stops</summary>
+      <ul>
+        <li><strong>Search distances</strong> (under the button) say how far from the line to look for each kind of stop.</li>
+        <li>Open a group in the list to see its stops. <em>Select all</em> and <em>Clear</em> work on one group at a time.</li>
+        <li>For cafés, <em>Only open on arrival</em> keeps those that will be open when the group gets there. Hours come from OpenStreetMap or from the club's own corrections; set your own with the clock button.</li>
+        <li>The cup button marks a café as a planned group stop, so later arrival times allow for the break.</li>
+        <li>Pin a stop to keep it through later searches. Delete removes it.</li>
+        <li>Use <em>Show stops on the map</em> above the map to hide the dots when you want a clear view of the route.</li>
+      </ul>
+      <p class="muted small">Stops come from OpenStreetMap volunteers, so a place can be missing, moved or closed. Check anything that matters before you rely on it.</p>
+    </details>
+
+    <details>
+      <summary>Adding your own cues on the map</summary>
+      <p><strong>Right-click</strong> the map where you want a cue (on a phone, <strong>press and hold</strong>). Pick a type: Left, Right, Straight, Danger, Water, Food, First aid, Toilets, Summit, Valley, Sprint or Generic. Give it a name and an optional note, then <em>Add cue</em>. There is also an <em>Add cue</em> button on the map that uses the middle of the view.</p>
+      <ul>
+        <li>The cue snaps to the nearest point on the route and is ticked for export straight away.</li>
+        <li>It must be within 3 km of the route. The menu shows how far from the line you clicked.</li>
+        <li>On Garmin and Wahoo, turn cues appear as course points with an alert. On Karoo and some other devices they appear as plain points.</li>
+        <li>Mistake? Delete it from the stops list.</li>
+      </ul>
+    </details>
+
+    <details>
+      <summary>Editing the route</summary>
+      <p>Press <em>Edit route</em>. Drag the line to move that stretch onto different roads, or tap the map to pull the route through a point. Drag a numbered point to move it, or tap it to remove it. Only the stretch you change is re-routed, and the rest of your file is left exactly as it was.</p>
+      <p>Edits stay on your own line: where the router's new path simply retraces your original, your original points are kept, so only the stretch that truly differs changes. <em>Prefer quieter roads</em> is off by default, because it can move a reroute onto side roads beside the one you chose; turn it on if that is what you want. <em>Undo</em> and <em>Redo</em> step through your changes.</p>
+    </details>
+
+    <details>
+      <summary>Reading the elevation profile</summary>
+      <p>The profile sits under the map and is coloured by gradient: blues are descents, green is flat, then yellow, orange and red as it gets steeper. Move your pointer along it to see distance, height and gradient, and a marker follows on the map. Shaded bands show detected climbs. The strip under the axis shows head, cross and tail wind when a forecast is available.</p>
+    </details>
+
+    <details>
+      <summary>Weather, warnings and daylight</summary>
+      <p>Forecasts are from Met Éireann, with Open-Meteo as a fallback. Weather warnings are shown exactly as Met Éireann issues them. If the warnings can't be fetched the page says so; that is not the same as "no warnings", so check the official page before you ride.</p>
+      <p class="help-links"><a href="https://www.met.ie/warnings" target="_blank" rel="noopener noreferrer">Met Éireann warnings</a><a href="https://www.met.ie/" target="_blank" rel="noopener noreferrer">met.ie</a></p>
+    </details>
+
+    <details>
+      <summary>Road closures and hazards</summary>
+      <p>Closures come from the club's own entries and from roadworks mapped in OpenStreetMap. Irish councils and Transport Infrastructure Ireland don't publish a feed we can use, so a clear result is <em>not</em> proof the road is open. Hazards such as cattle grids, fords and level crossings are flagged from map data.</p>
+    </details>
+
+    <details>
+      <summary>Exporting to your device</summary>
+      <p>Choose your device on the export page and follow the steps shown there. The same stops are written in the format each device understands.</p>
+      <p class="help-links">
+        <a href="https://support.garmin.com/" target="_blank" rel="noopener noreferrer">Garmin support</a>
+        <a href="https://support.wahoofitness.com/" target="_blank" rel="noopener noreferrer">Wahoo support</a>
+        <a href="https://support.hammerhead.io/" target="_blank" rel="noopener noreferrer">Hammerhead (Karoo) support</a>
+      </p>
+      <p class="muted small">Device behaviour changes with firmware. If a stop doesn't show, try the plain GPX export.</p>
+    </details>
+
+    <details>
+      <summary>Sharing the ride sheet</summary>
+      <p>The ride sheet has the meeting point, times for each pace group, stops, climbs, weather and emergency details on one page. Turn on a share link to send it to the group; anyone with the link can see it, including the phone number you entered, and you can switch the link off at any time. <em>Copy summary for WhatsApp</em> gives you a short text version, and <em>Cue card (PDF)</em> prints on A5 for a jersey pocket. Routes imported from Strava can't be shared this way.</p>
+    </details>
+
+    <details>
+      <summary>Your data</summary>
+      <p>Download or delete everything we hold about you from your account page. Disconnecting Strava removes its data immediately. <a href="/privacy">Read the privacy policy</a>, or contact the <a href="https://www.dataprotection.ie" target="_blank" rel="noopener noreferrer">Data Protection Commission</a> if you have a complaint.</p>
+    </details>
+
+    <p class="help-emerg"><strong>In an emergency call 112 or 999.</strong> Defibrillator locations come from OpenStreetMap and may be incomplete or out of date.</p>
+    <p class="muted small">Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>. Weather: Met Éireann and Open-Meteo.</p>
+  </div>
+</dialog>

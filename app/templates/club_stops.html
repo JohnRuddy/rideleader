@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Club stops · Ride Leader Kit{% endblock %}
+{% block head %}<script src="{{ url_for('static', filename='club.js') }}" defer></script>{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Club stops</h1>
+  <p class="muted">Cafés, regroup spots, hazards and defibrillators the club trusts. They're suggested first when planning a ride, with a club badge. A café's hours here override OpenStreetMap's. Re-verify a stop whenever you've checked it's still right.</p>
+</section>
+
+<section class="card" id="stops" data-admin="{{ 'yes' if admin else 'no' }}">
+  {% if stops %}
+  <ul class="strava-list">
+    {% for s in stops %}
+    <li class="strava-row" data-id="{{ s.id }}">
+      <div class="strava-info">
+        <strong>{{ s.name }}</strong> <span class="badge">{{ s.kind_label }}</span>
+        <span class="muted small">{{ '%.5f' % s.lat }}, {{ '%.5f' % s.lon }}</span>
+        {% if s.hours %}<span class="small">Hours: {{ s.hours }}</span>{% endif %}
+        {% if s.note %}<span class="small">{{ s.note }}</span>{% endif %}
+        <span class="small {{ '' if s.verified_at else 'warn' }}">{{ ('Verified ' ~ s.verified_at[:10]) if s.verified_at else 'Not verified yet' }}</span>
+      </div>
+      <button type="button" class="chip js-verify">I've checked it</button>
+      <button type="button" class="chip js-delete">Remove</button>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="muted">No stops yet. Add one below, or use the 🏷 button on a stop in a route's panel to save it here.</p>{% endif %}
+</section>
+
+<section class="card">
+  <h2>Add a stop</h2>
+  <form id="stop-form" class="stack">
+    <label>Name <input type="text" name="name" maxlength="200" required></label>
+    <label>Kind <select name="kind">{% for c in categories if c.key != 'regroup' %}<option value="{{ c.key }}">{{ c.label }}</option>{% endfor %}</select></label>
+    <label>Latitude <input type="number" name="lat" step="any" required inputmode="decimal" placeholder="53.1585"></label>
+    <label>Longitude <input type="number" name="lon" step="any" required inputmode="decimal" placeholder="-6.9095"></label>
+    <label>Opening hours (OpenStreetMap format, for cafés) <input type="text" name="hours" maxlength="300" placeholder="Mo-Sa 08:00-17:00; Su 09:00-16:00; PH off"></label>
+    <label>Note <input type="text" name="note" maxlength="1000" placeholder="Room for 20, cyclist friendly, card only"></label>
+    <label class="check"><input type="checkbox" name="verified" checked> <span>I've checked this is right (sets the verified date to today)</span></label>
+    <button type="submit" class="btn">Add to the library</button>
+    <p class="warn small" id="stop-msg" role="alert"></p>
+  </form>
+</section>
+{% endblock %}

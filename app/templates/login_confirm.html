@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Sign in · Ride Leader Kit{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Finish signing in</h1>
+  <form method="post" action="{{ url_for('auth.verify_post', token=token, next=next) }}" class="stack">
+    {{ csrf_input() }}
+    <button type="submit" class="btn">Sign in</button>
+  </form>
+</section>
+{% endblock %}

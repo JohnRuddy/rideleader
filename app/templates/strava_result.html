@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · Ride Leader Kit{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ title }}</h1>
+  <p>{{ message }}</p>
+  <p><a class="btn link" href="{{ url_for('main.index') }}">Back to your routes</a></p>
+</section>
+{% endblock %}

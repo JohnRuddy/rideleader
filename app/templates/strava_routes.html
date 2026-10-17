@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Your Strava routes · Ride Leader Kit{% endblock %}
+{% block head %}<script src="{{ url_for('static', filename='strava.js') }}" defer></script>{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Your Strava routes</h1>
+  {% if strava_mode == 'mock' %}<p class="warn small">Development mode: pretend Strava athlete and sample routes.</p>{% endif %}
+  <p class="muted">Pick one to plan from. Imported routes are private to you and deleted after 7 days; you can share your own copy with the club from the route page.</p>
+  {% if error %}<p class="error" role="alert">{{ error }} Showing what we saved earlier.</p>{% endif %}
+  {% if missing_private %}<p class="warn small">Strava didn't give us permission to read your private routes, so only public ones are listed. You can allow it by reconnecting.</p>{% endif %}
+  <div class="tidy-bar">
+    <a class="chip" href="{{ url_for('strava.routes', refresh=1) }}">Refresh from Strava</a>
+    {% if untidy %}
+    <form method="post" action="{{ url_for('strava.tidy') }}" class="inline">{{ csrf_input() }}
+      <button type="submit" class="chip" title="Name each route by distance and where it turns, e.g. 063 km · Naas">Tidy {{ untidy }} name{{ '' if untidy == 1 else 's' }}</button></form>
+    {% endif %}
+  </div>
+  {% if tidied is not none %}
+    <p class="small" role="status">{% if tidied %}Renamed {{ tidied }} route{{ '' if tidied == 1 else 's' }}{% else %}Nothing to rename{% endif %}{% if left %}; {{ left }} still to do. Press Tidy again for the rest.{% else %}. All names are sortable now.{% endif %}</p>
+  {% endif %}
+  <p class="muted small">Names read “distance · where it turns back”, so the list sorts shortest to longest. They only change inside this app; your routes on Strava are left alone.</p>
+</section>
+
+{% if rows %}
+<section class="card">
+  <label class="opt"><input type="checkbox" id="auto-scan" checked> Find stops along the route when I import (cafés, defibrillators, water, toilets, historic sites…)</label>
+  <ul class="strava-list">
+    {% for r in rows %}
+    <li class="strava-row">
+      <svg class="thumb" viewBox="0 0 100 60" role="img" aria-label="Outline of {{ r.name }}" data-poly="{{ r.summary_polyline }}"></svg>
+      <div class="strava-info">
+        <div><strong>{{ r.tidy_name or r.name }}</strong>{% if r.private %} <span class="badge">private</span>{% endif %}</div>
+        {% if r.tidy_name and r.tidy_name != r.name %}<span class="muted small">On Strava: {{ r.name }}</span>{% endif %}
+        <span class="muted small">{{ '%.1f' % (r.distance_m / 1000) }} km · {{ r.elevation_gain_m | round | int }} m climbing</span>
+        <span class="muted small">Kept until {{ r.expires_at.strftime('%d %b %Y') }}</span>
+      </div>
+      {% if r.strava_route_id in imported %}
+        <a class="btn link alt" href="{{ url_for('main.show', route_id=imported[r.strava_route_id]) }}">Open</a>
+      {% else %}
+        <form method="post" action="{{ url_for('strava.import_', strava_route_id=r.strava_route_id) }}">{{ csrf_input() }}<input type="hidden" name="scan" value="1">
+          <button type="submit" class="btn small">Import</button></form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% else %}
+<section class="card"><p class="muted">No routes found on your Strava account.</p></section>
+{% endif %}
+
+<section class="card">
+  <form method="post" action="{{ url_for('strava.disconnect') }}" class="stack"
+        onsubmit="return confirm('Disconnect Strava and delete everything we hold from it?')">
+    {{ csrf_input() }}<input type="hidden" name="confirm" value="yes">
+    <button type="submit" class="btn ghost">Disconnect Strava and delete its data</button>
+  </form>
+</section>
+{% endblock %}
+{% block attribution %}
+  · {% if strava_brand.powered_img %}{% include "_strava_powered.html" %}{% else %}Powered by Strava{% endif %}
+{% endblock %}

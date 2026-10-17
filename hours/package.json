@@ -1,0 +1,10 @@
+{
+  "name": "rlk-hours",
+  "version": "0.1.0",
+  "private": true,
+  "description": "opening_hours.js evaluation sidecar for Ride Leader Kit",
+  "main": "server.js",
+  "dependencies": {
+    "opening_hours": "3.15.0"
+  }
+}

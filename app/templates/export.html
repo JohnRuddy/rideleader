@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Export · {{ route.title }}{% endblock %}
+{% block content %}
+<section class="card">
+  <p><a href="{{ url_for('main.show', route_id=route.id) }}">← Back to route</a></p>
+  <h1>Export {{ route.title }}</h1>
+  <p class="muted">{{ count }} waypoint{{ '' if count == 1 else 's' }} selected. Your choice of device is remembered.</p>
+</section>
+
+<section class="card">
+  <h2>Where is this going?</h2>
+  <div class="devices" role="radiogroup" aria-label="Device">
+    {% for d in devices %}
+    <a class="device{{ ' on' if d.key == device.key }}" role="radio" aria-checked="{{ 'true' if d.key == device.key else 'false' }}"
+       href="{{ url_for('main.export_page', route_id=route.id, device=d.key) }}">
+      <strong>{{ d.label }}</strong>
+      <span class="muted">{{ d.formats | map(attribute='label') | join(' or ') }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <h2>{{ device.label }}</h2>
+  {% for w in warnings %}<p class="warn" role="alert">{{ w }}</p>{% endfor %}
+  <p>
+    {% for f in device.formats %}
+    <a class="btn link{{ ' alt' if not loop.first }}"
+       href="{{ url_for('main.export_download', route_id=route.id, device_key=device.key, fmt=f.key) }}" download>
+      Download {{ f.label }}</a>
+    {% endfor %}
+  </p>
+  <ul class="steps-plain">{% for a in device.advice %}<li>{{ a }}</li>{% endfor %}</ul>
+
+  {% if device.key == 'strava' %}
+  <h3>Send to Strava</h3>
+  <p class="muted small">To put this version on Strava: Strava's API only lets apps read your routes, never create or change them, so the last step is yours. The file above holds the route with the {{ count }} cue{{ '' if count == 1 else 's' }} you have ticked.</p>
+  <ol class="steps">
+    <li>Download the GPX file above.</li>
+    <li><a href="{{ strava_url }}" target="_blank" rel="noopener noreferrer">Open Strava's new route page</a> and use its upload option to pick the file, then <strong>Save</strong>.</li>
+    <li>Look at the saved route. If a cue didn't come through, that is Strava dropping it: it is still in the file for your Garmin, Wahoo or Karoo.</li>
+    <li>Strava keeps the original as well. Delete the old copy on Strava if you only want one.</li>
+  </ol>
+  <p class="muted small">Creating a route from a file on Strava may need a Strava subscription. Importing the new route back here later brings in the line only; your cues stay in this app.</p>
+  {% endif %}
+</section>
+
+<p class="attrib muted">Route and stop data © OpenStreetMap contributors (ODbL). Files include this attribution.</p>
+{% endblock %}

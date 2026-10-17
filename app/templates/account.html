@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Your account · Ride Leader Kit{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Your account</h1>
+  <p>Signed in as <strong>{{ current_user.email }}</strong>. You have {{ my_routes }} route{{ '' if my_routes == 1 else 's' }}.</p>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+</section>
+
+{% if strava_enabled %}
+<section class="card">
+  <h2>Strava</h2>
+  {% if conn %}
+    <p>Connected{% if strava_mode == 'mock' %} <span class="badge">pretend Strava (development)</span>{% endif %}. We hold {{ strava_routes }} route listing{{ '' if strava_routes == 1 else 's' }} for you, kept for at most 7 days.</p>
+    <p><a class="btn link" href="{{ url_for('strava.routes') }}">Your Strava routes</a></p>
+    <form method="post" action="{{ url_for('strava.disconnect') }}" class="stack"
+          onsubmit="return confirm('Disconnect Strava and delete everything we hold from it?')">
+      {{ csrf_input() }}<input type="hidden" name="confirm" value="yes">
+      <button type="submit" class="btn ghost">Disconnect Strava and delete its data</button>
+    </form>
+  {% else %}
+    <p class="muted">Not connected. The app works fully without Strava.</p>
+    <p><a class="btn link" href="{{ url_for('strava.connect') }}">Connect Strava…</a></p>
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Your data</h2>
+  <p><a class="btn link alt" href="{{ url_for('account.export_data') }}">Download everything we hold about you (JSON)</a></p>
+  <p class="muted small">Read how it's used in the <a href="{{ url_for('account.privacy') }}">privacy policy</a>.</p>
+</section>
+
+<section class="card">
+  <h2>Delete my account</h2>
+  <p class="muted">This permanently deletes your account, all your routes (including ones shared with your club), your Strava connection and data, and your sign-in history. We'll email you a confirmation. It can't be undone.</p>
+  <form method="post" action="{{ url_for('account.delete_account') }}" class="stack">
+    {{ csrf_input() }}
+    <label>Type your email to confirm <input type="email" name="confirm_email" autocomplete="off" required></label>
+    <button type="submit" class="btn ghost">Delete my account</button>
+  </form>
+</section>
+{% endblock %}
