@@ -1,6 +1,6 @@
 # One image runs the web app, the RQ worker and the scheduler. Production: gunicorn, non-root, no dev tools.
 # Development (docker-compose.yml) builds with INSTALL_DEV=true and overrides the command with Flask's reloader.
-FROM python:3.12-slim
+FROM python:3.14-slim
 WORKDIR /srv
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 ARG INSTALL_DEV=false
