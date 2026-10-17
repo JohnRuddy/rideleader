@@ -12,7 +12,7 @@ internet -> Caddy (checkmysitemap stack) --edge network--> rideleader-web:8431
 
 | Thing | Where |
 |---|---|
-| App stack | `/opt/rideleader` (compose project `rideleader`: db, redis, hours, web, worker, scheduler) |
+| App stack | `/opt/rideleader` (compose project `rideleader`: db, redis, hours, rl-web, worker, scheduler) |
 | Production settings | `/opt/rideleader/.env` (mode 600, written by the pipeline from the `PROD_ENV` secret) |
 | Site file for Caddy | `/opt/edge/sites/rideleader.caddy` (written by `deploy/deploy.sh`) |
 | Backups | `/opt/rideleader/backups`, nightly 02:41 UTC and before every deploy, 30 days kept |
@@ -40,7 +40,7 @@ Sign-in links are emailed. Until `SMTP_*` is configured, print one on the server
 
 ```
 cd /opt/rideleader
-docker compose -f docker-compose.prod.yml exec web flask --app app login-link you@example.com
+docker compose -f docker-compose.prod.yml exec rl-web flask --app app login-link you@example.com
 ```
 
 The first person to sign in becomes the admin. In production the link is never shown on the web page.
@@ -50,7 +50,7 @@ The first person to sign in becomes the admin. In production the link is never s
 ```
 cd /opt/rideleader
 docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs -f web
+docker compose -f docker-compose.prod.yml logs -f rl-web
 bash deploy/backup.sh                       # extra backup now
 gunzip -c backups/<file>.sql.gz | docker compose -f docker-compose.prod.yml exec -T db psql -U rlk -d rlk   # restore
 ```
@@ -63,5 +63,7 @@ gunzip -c backups/<file>.sql.gz | docker compose -f docker-compose.prod.yml exec
   `docker-compose.yml` runs your own, which needs several GB of disk and a long first import, so it is not on this
   shared server by default.
 - **Map tiles**: the public OpenStreetMap tile server is for light use. Set `TILE_URL` to a tile provider if traffic grows.
+- **Service names on `edge`**: a compose service name becomes a DNS name on every network it joins, so this app's web
+  service is `rl-web`. A second service called `web` on `edge` would hijack checkmysitemap.com's traffic.
 - **Shared Caddy**: if the checkmysitemap.com deploy ever replaces its Caddy files, keep the `edge` network, the
   `/opt/edge/sites` mount and the `import` line, or this site goes dark.

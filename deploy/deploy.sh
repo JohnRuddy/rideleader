@@ -37,14 +37,14 @@ start() {
 healthy() {
   log "Waiting for the web app to report healthy"
   for _ in $(seq 1 40); do
-    if "${COMPOSE[@]}" exec -T web python -c \
+    if "${COMPOSE[@]}" exec -T rl-web python -c \
       "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8431/healthz', timeout=3)" >/dev/null 2>&1; then
       echo "Healthy."; return 0
     fi
     sleep 3
   done
   echo "Web app did not become healthy in time." >&2
-  "${COMPOSE[@]}" logs --tail=60 web >&2 || true
+  "${COMPOSE[@]}" logs --tail=60 rl-web >&2 || true
   return 1
 }
 

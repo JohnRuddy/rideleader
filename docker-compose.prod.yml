@@ -80,7 +80,9 @@ services:
       interval: 10s
       retries: 10
 
-  web:
+  # Named rl-web, not web: the service name becomes a DNS alias on the shared edge network, and the other
+  # app on this server already owns the name "web" there.
+  rl-web:
     <<: *logging
     image: ${APP_IMAGE:?Set APP_IMAGE}
     restart: unless-stopped
