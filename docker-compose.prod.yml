@@ -101,6 +101,7 @@ services:
     image: ${APP_IMAGE:?Set APP_IMAGE}
     restart: unless-stopped
     command: ["rq", "worker", "--url", "redis://redis:6379/0"]
+    healthcheck: {disable: true}  # the image's HTTP check only fits the web process
     environment: *appenv
     depends_on:
       db: {condition: service_healthy}
@@ -111,6 +112,7 @@ services:
     image: ${APP_IMAGE:?Set APP_IMAGE}
     restart: unless-stopped
     command: ["python", "-m", "app.scheduler"]
+    healthcheck: {disable: true}  # the image's HTTP check only fits the web process
     environment: *appenv
     depends_on:
       db: {condition: service_healthy}
