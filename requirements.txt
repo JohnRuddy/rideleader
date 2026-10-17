@@ -7,7 +7,7 @@ shapely==2.0.6
 gpxpy==1.6.2
 gunicorn==23.0.0
 numpy==2.1.0
-requests==2.32.3
+requests==2.34.2
 redis==5.0.8
 rq==1.16.2
 fit-tool==0.9.16
