@@ -4,6 +4,7 @@
 <section class="card">
   <h1>Your account</h1>
   <p>Signed in as <strong>{{ current_user.email }}</strong>. You have {{ my_routes }} route{{ '' if my_routes == 1 else 's' }}.</p>
+  <p class="muted">{% if my_clubs %}Your club{{ '' if my_clubs|length == 1 else 's' }}: {% for c in my_clubs %}<a href="{{ url_for('clubadmin.manage', club_id=c.id) }}">{{ c.name }}</a>{{ ', ' if not loop.last }}{% endfor %}.{% else %}You aren't in a club yet.{% endif %}</p>
   {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 </section>
 

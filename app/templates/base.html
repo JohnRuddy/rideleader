@@ -36,6 +36,7 @@
       {% if current_user %}
         <a href="{{ url_for('main.index') }}">My routes</a>
         <a href="{{ url_for('club.page') }}">Club stops</a>
+        <a href="{{ url_for('clubadmin.index') }}" class="club-link" title="Your clubs and members">{{ current_club.name if current_club else 'Clubs' }}</a>
         {% if not public %}<button type="button" class="linkbtn" data-open-help>Help</button>{% endif %}
         <a href="{{ url_for('account.account') }}" class="who" title="Your account">{{ current_user.email }}</a>
         <form method="post" action="{{ url_for('auth.logout') }}" class="inline">{{ csrf_input() }}<button type="submit" class="linkbtn">Sign out</button></form>

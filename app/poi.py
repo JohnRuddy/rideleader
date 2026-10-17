@@ -145,7 +145,7 @@ def run_scan(route, client, ttl, corridors=None, enabled=None, progress=lambda f
     lats, lons = route_arrays(route)
     pad = max(corridors[k] for k in enabled) / 66_000 + 0.003  # metres -> degrees of longitude, with margin
     elements = fetch_elements(client, tiles_for_points(lats, lons, pad), ttl, progress)
-    osm, club = normalise(elements), club_stops.club_pois(enabled)
+    osm, club = normalise(elements), club_stops.club_pois(enabled, route.club_id)
     hits = find_hits(route, club_stops.drop_osm_duplicates(osm, club) + club, corridors, enabled)
     summary = apply_scan(route, hits)
     db.session.commit()

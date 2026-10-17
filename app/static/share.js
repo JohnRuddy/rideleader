@@ -5,9 +5,10 @@
   const stateEl = document.getElementById('share-state'), msg = document.getElementById('share-msg');
   const create = document.getElementById('share-create'), copy = document.getElementById('share-copy'), stop = document.getElementById('share-stop');
   let url = null;
-  const api = async (method) => {
-    const r = await fetch(`${base}/share`, { method });
+  const api = async (method, body) => {
+    const r = await fetch(`${base}/share`, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
     const data = r.status === 204 ? {} : await r.json().catch(() => ({}));
+    if (r.status === 409 && data.needs_confirm) { const e = new Error(data.error); e.needsConfirm = data; throw e; }
     if (!r.ok) throw new Error(data.error || (r.status === 401 ? 'Sign in first to share a ride.' : r.statusText));
     return data;
   };
@@ -16,9 +17,9 @@
   function render(s) {
     url = s.url;
     stateEl.replaceChildren();
-    if (!s.can_share) {
-      stateEl.textContent = "This route came from your Strava, so it can't be shared as it is. Use “Share a copy with your club…” at the top of the page first, then share that copy.";
-      create.hidden = copy.hidden = stop.hidden = true; return;
+    if (s.makes_copy) {
+      stateEl.textContent = 'This route came from your Strava. Sharing makes your own copy, with your stops, cues and notes, and shares that. Your Strava route itself is never shown to anyone else.';
+      create.hidden = !signedIn; copy.hidden = stop.hidden = true; return;
     }
     if (s.shared) {
       const a = document.createElement('a'); a.href = s.url; a.textContent = s.url;
@@ -28,7 +29,14 @@
   }
   async function load() { try { render(await (await fetch(`${base}/share`)).json()); } catch (e) { stateEl.textContent = e.message; } }
 
-  create.addEventListener('click', async () => { try { const d = await api('POST'); render({ shared: true, url: d.url, can_share: true }); msg.textContent = 'Link created.'; } catch (e) { msg.textContent = e.message; } });
+  create.addEventListener('click', async () => {
+    try { const d = await api('POST'); render({ shared: true, url: d.url, can_share: true }); msg.textContent = 'Link created.'; }
+    catch (e) {
+      if (!e.needsConfirm) { msg.textContent = e.message; return; }
+      if (!confirm(e.needsConfirm.consent_text + '\n\nMake the copy and share it?')) return;
+      try { const d = await api('POST', { confirm_own: true }); location.href = d.copy_url; } catch (e2) { msg.textContent = e2.message; }
+    }
+  });
   stop.addEventListener('click', async () => {
     if (!confirm('Stop sharing? The old link will stop working for everyone.')) return;
     try { await api('DELETE'); render({ shared: false, url: null, can_share: true }); msg.textContent = 'Sharing stopped.'; } catch (e) { msg.textContent = e.message; }
@@ -37,6 +45,15 @@
   document.getElementById('share-wa').addEventListener('click', async () => {
     msg.textContent = 'Working it out…';
     try { const t = await (await fetch(`${base.replace('/api', '')}/summary.txt`)).text(); clip(t, 'Copied: paste it into the group.'); } catch (e) { msg.textContent = e.message; }
+  });
+  const vis = document.getElementById('club-visible');
+  if (vis) vis.addEventListener('change', async () => {
+    try {
+      const r = await fetch(`${base}/visibility`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visibility: vis.checked ? 'club' : 'private' }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || r.statusText);
+      msg.textContent = vis.checked ? 'Now visible to your club.' : 'Now private to you.';
+    } catch (e) { vis.checked = !vis.checked; msg.textContent = e.message; }
   });
   load();
 })();

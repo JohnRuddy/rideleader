@@ -32,6 +32,7 @@ class Route(db.Model):
     editor = db.Column(JSONB)                     # via points and legs (see editor.Track); null until first edited
     owner_id = db.Column(db.Integer, db.ForeignKey("app_user.id", ondelete="CASCADE"), index=True)  # null = unowned (legacy / signed-out upload)
     visibility = db.Column(db.String(10), nullable=False, default="club", server_default="club")    # private | club
+    club_id = db.Column(db.Integer, db.ForeignKey("club.id", ondelete="SET NULL"), index=True)   # the club it is shared with (if visibility = club)
     strava_route_id = db.Column(BigInteger)       # set only on routes imported from Strava (source = 'strava')
     strava_expires_at = db.Column(db.DateTime(timezone=True))  # Strava data is kept for at most 7 days
     state_seq = db.Column(db.Integer)             # undo cursor: seq of the current RouteState; null = no history yet
@@ -159,6 +160,7 @@ class LoginToken(db.Model):
     expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
     used_at = db.Column(db.DateTime(timezone=True))
     created_at = db.Column(db.DateTime(timezone=True), default=_now)
+    invite_id = db.Column(db.Integer, db.ForeignKey("invite.id", ondelete="SET NULL"))   # the code entered when asking for the link
 
 
 class StravaConnection(db.Model):
@@ -207,6 +209,35 @@ class Club(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False, default="")
     settings = db.Column(JSONB)          # see club.DEFAULT_SETTINGS
+    created_at = db.Column(db.DateTime(timezone=True), default=_now)
+
+
+class Membership(db.Model):
+    """A person belongs to a club as a 'member' or a club 'admin' (who can invite and remove people)."""
+    __table_args__ = (UniqueConstraint("user_id", "club_id"),)
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("app_user.id", ondelete="CASCADE"), index=True, nullable=False)
+    club_id = db.Column(db.Integer, db.ForeignKey("club.id", ondelete="CASCADE"), index=True, nullable=False)
+    role = db.Column(db.String(10), nullable=False, default="member", server_default="member")   # member | admin
+    joined_at = db.Column(db.DateTime(timezone=True), default=_now)
+    invited_by = db.Column(db.Integer, db.ForeignKey("app_user.id", ondelete="SET NULL"))
+
+
+class Invite(db.Model):
+    """An invite code for one club. Only a hash of the code is stored, so a code is shown once, when it is made."""
+    id = db.Column(db.Integer, primary_key=True)
+    club_id = db.Column(db.Integer, db.ForeignKey("club.id", ondelete="CASCADE"), index=True, nullable=False)
+    code_hash = db.Column(db.String(64), unique=True, nullable=False)
+    hint = db.Column(db.String(8), nullable=False, default="")      # last characters, to tell codes apart in the list
+    label = db.Column(db.String(80))
+    role = db.Column(db.String(10), nullable=False, default="member", server_default="member")   # what the code grants
+    email = db.Column(db.String(254))                                # set: only this address can use it
+    max_uses = db.Column(db.Integer)                                 # null = unlimited until it expires
+    uses = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    revoked_at = db.Column(db.DateTime(timezone=True))
+    created_by = db.Column(db.Integer, db.ForeignKey("app_user.id", ondelete="SET NULL"))
+    created_at = db.Column(db.DateTime(timezone=True), default=_now)
 
 
 class County(db.Model):
@@ -261,6 +292,7 @@ class Closure(db.Model):
     description = db.Column(db.String(300), nullable=False)
     starts_at = db.Column(db.DateTime(timezone=True), nullable=False)
     ends_at = db.Column(db.DateTime(timezone=True), nullable=False, index=True)
+    club_id = db.Column(db.Integer, db.ForeignKey("club.id", ondelete="CASCADE"), index=True)
     entered_by = db.Column(db.Integer, db.ForeignKey("app_user.id", ondelete="SET NULL"))
     created_at = db.Column(db.DateTime(timezone=True), default=_now)
 
@@ -283,5 +315,6 @@ class ClubStop(db.Model):
     verified_by = db.Column(db.Integer, db.ForeignKey("app_user.id", ondelete="SET NULL"))
     last_verified_at = db.Column(db.DateTime(timezone=True))
     active = db.Column(db.Boolean, nullable=False, default=True)
+    club_id = db.Column(db.Integer, db.ForeignKey("club.id", ondelete="CASCADE"), index=True)
     created_by = db.Column(db.Integer, db.ForeignKey("app_user.id", ondelete="SET NULL"))
     created_at = db.Column(db.DateTime(timezone=True), default=_now)

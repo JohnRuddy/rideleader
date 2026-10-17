@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Clubs · Ride Leader Kit{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='clubs.css') }}">{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="eyebrow">{{ 'All clubs' if is_platform_admin else 'Your clubs' }}</p>
+  <h1>Clubs</h1>
+  <p class="muted">A club is a group of leaders who share routes, stops and closures with each other. People join with an invite code from a club admin.</p>
+  {% for cat, msg in notes %}<p class="{{ 'error' if cat == 'error' else 'note-ok' }}" role="{{ 'alert' if cat == 'error' else 'status' }}">{{ msg }}</p>{% endfor %}
+</section>
+
+<section class="card">
+  <ul class="club-list">
+    {% for r in rows %}
+    <li class="club-row">
+      <div class="club-main">
+        <a class="club-name" href="{{ url_for('clubadmin.manage', club_id=r.club.id) }}">{{ r.club.name or 'Unnamed club' }}</a>
+        {% if current_club and current_club.id == r.club.id %}<span class="badge">current</span>{% endif %}
+        {% if r.admin %}<span class="badge badge-admin">admin</span>{% endif %}
+        <span class="muted small">{{ r.counts.members }} member{{ '' if r.counts.members == 1 else 's' }} · {{ r.counts.routes }} route{{ '' if r.counts.routes == 1 else 's' }} · {{ r.counts.stops }} stop{{ '' if r.counts.stops == 1 else 's' }}</span>
+      </div>
+      <div class="club-actions">
+        {% if not (current_club and current_club.id == r.club.id) %}
+        <form method="post" action="{{ url_for('clubadmin.switch') }}" class="inline">{{ csrf_input() }}<input type="hidden" name="club_id" value="{{ r.club.id }}"><input type="hidden" name="next" value="{{ url_for('clubadmin.index') }}"><button type="submit" class="chip">Switch to it</button></form>
+        {% endif %}
+        <a class="chip" href="{{ url_for('clubadmin.manage', club_id=r.club.id) }}">{{ 'Manage' if r.admin else 'Members' }}</a>
+      </div>
+    </li>
+    {% else %}
+    <li class="muted">You aren't in a club yet. Ask a club admin for an invite code, then sign in with it.</li>
+    {% endfor %}
+  </ul>
+</section>
+
+{% if is_platform_admin %}
+<section class="card">
+  <h2>Set up a new club</h2>
+  <form method="post" action="{{ url_for('clubadmin.create') }}" class="stack">
+    {{ csrf_input() }}
+    <label>Club name <input type="text" name="name" minlength="2" maxlength="120" required placeholder="Kildare Wheelers"></label>
+    <button type="submit" class="btn">Create club</button>
+  </form>
+  <p class="muted small">You become its first admin. Then make an invite code for the person who will run it and give them admin rights with it.</p>
+</section>
+{% endif %}
+{% endblock %}

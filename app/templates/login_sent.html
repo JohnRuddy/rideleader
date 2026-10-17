@@ -4,6 +4,7 @@
 <section class="card narrow">
   <h1>Check your email</h1>
   <p>If <strong>{{ email }}</strong> is right, a sign-in link is on its way. It works once and expires in 15 minutes.</p>
+  <p class="muted small">Nothing arrived? Check your spam folder. If this is your first time, you need an invite code from your club admin: <a href="{{ url_for('auth.login') }}">go back</a> and add it.</p>
   {% if dev_link %}
   <p class="warn small">Development mode: no email service is set up, so here is the link instead. <a href="{{ dev_link }}">Sign in</a></p>
   {% endif %}

@@ -4,11 +4,14 @@
 <section class="card narrow">
   <h1>Sign in</h1>
   <p class="muted">Enter your email and we'll send you a link. No password to remember.</p>
+  <p class="muted small">First time here? Add the invite code your club admin gave you. After that you only need your email.</p>
   {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
   <form method="post" action="{{ url_for('auth.login_request') }}" class="stack">
     {{ csrf_input() }}
     <input type="hidden" name="next" value="{{ next or '' }}">
-    <label>Email <input type="email" name="email" autocomplete="email" required autofocus></label>
+    <label>Email <input type="email" name="email" autocomplete="email" value="{{ email or '' }}" required {% if not code %}autofocus{% endif %}></label>
+    <label>Invite code <span class="muted small">(first time only)</span>
+      <input type="text" name="code" value="{{ code or '' }}" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCDE-FGH23" maxlength="20" {% if code %}autofocus{% endif %}></label>
     <button type="submit" class="btn">Email me a link</button>
   </form>
 </section>

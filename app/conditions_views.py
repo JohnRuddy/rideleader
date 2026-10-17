@@ -11,6 +11,7 @@ from geoalchemy2.elements import WKTElement
 from . import along_route as ar
 from . import closures as cl
 from . import club as clubmod
+from . import clubs
 from . import counties, db, editor, history, pace
 from . import edit_service as es
 from . import warnings_feed as wf
@@ -94,7 +95,7 @@ def days(route_id):
 # ---------------- closures ----------------
 
 def _closure_check(plan: Plan) -> dict:
-    return cl.check(plan.lats, plan.lons, plan.route.dist_m, plan.start, plan.finish, cl.providers(current_app.config))
+    return cl.check(plan.lats, plan.lons, plan.route.dist_m, plan.start, plan.finish, cl.providers(current_app.config, plan.route.club_id))
 
 
 @bp.get("/api/routes/<int:route_id>/closures")
@@ -158,7 +159,7 @@ def add_closure():
     if ends <= starts:
         return jsonify(error="The end date must be after the start."), 400
     c = Closure(geom=WKTElement(f"POINT({lon} {lat})", srid=4326), radius_m=radius, description=text, starts_at=starts,
-                ends_at=ends, entered_by=g.user.id)
+                ends_at=ends, entered_by=g.user.id, club_id=clubs.current_club_id())
     db.session.add(c)
     db.session.commit()
     return jsonify(_closure_json(c)), 201
@@ -175,7 +176,7 @@ def _closure_json(c: Closure) -> dict:
 @login_required
 def list_closures():
     """Closures that have not yet expired, for the club to see and tidy up."""
-    rows = Closure.query.filter(Closure.ends_at >= _now()).order_by(Closure.ends_at).all()
+    rows = clubs.scoped(Closure.query, Closure).filter(Closure.ends_at >= _now()).order_by(Closure.ends_at).all()
     return jsonify([_closure_json(c) for c in rows])
 
 
@@ -183,7 +184,9 @@ def list_closures():
 @login_required
 def delete_closure(closure_id):
     c = db.session.get(Closure, closure_id) or abort(404)
-    if c.entered_by != g.user.id and g.user.role != "admin":
+    if c.club_id != clubs.current_club_id() and not clubs.is_platform_admin(g.user):
+        abort(404)
+    if c.entered_by != g.user.id and g.user.role != "admin" and not g.club_admin:
         abort(403, description="Only the person who entered a closure, or a club admin, can remove it.")
     db.session.delete(c)
     db.session.commit()
@@ -195,17 +198,18 @@ def delete_closure(closure_id):
 @bp.get("/api/club")
 @login_required
 def get_club():
-    club = clubmod.get_club()
-    return jsonify({"name": club.name, "settings": clubmod.settings(), "defaults": clubmod.DEFAULT_SETTINGS, "your_role": g.user.role})
+    club = clubmod.get_club(clubs.current_club_id())
+    return jsonify({"name": club.name, "settings": clubmod.settings(club.id), "defaults": clubmod.DEFAULT_SETTINGS,
+                    "your_role": "admin" if (g.user.role == "admin" or g.club_admin) else g.user.role})
 
 
 @bp.put("/api/club")
 @login_required
 def put_club():
-    if g.user.role != "admin":
+    if g.user.role != "admin" and not g.club_admin:
         abort(403, description="Only a club admin can change the club's settings.")
     body = request.get_json(silent=True) or {}
-    club = clubmod.get_club()
+    club = clubmod.get_club(clubs.current_club_id())
     try:
         updates = clubmod.validate(body)
     except ValueError as e:
@@ -214,4 +218,4 @@ def put_club():
         club.name = str(body["name"]).strip()[:120]
     club.settings = {**(club.settings or {}), **updates}
     db.session.commit()
-    return jsonify({"name": club.name, "settings": clubmod.settings()})
+    return jsonify({"name": club.name, "settings": clubmod.settings(club.id)})

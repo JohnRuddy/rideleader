@@ -33,6 +33,11 @@ _ADDED_COLUMNS = [
     "CREATE UNIQUE INDEX IF NOT EXISTS ix_ride_share_token ON ride (share_token)",
     "ALTER TABLE route ADD COLUMN IF NOT EXISTS road_summary jsonb",
     "ALTER TABLE waypoint ADD COLUMN IF NOT EXISTS club_stop_id integer REFERENCES club_stop(id) ON DELETE SET NULL",
+    "ALTER TABLE club ADD COLUMN IF NOT EXISTS created_at timestamptz",
+    "ALTER TABLE route ADD COLUMN IF NOT EXISTS club_id integer REFERENCES club(id) ON DELETE SET NULL",
+    "ALTER TABLE club_stop ADD COLUMN IF NOT EXISTS club_id integer REFERENCES club(id) ON DELETE CASCADE",
+    "ALTER TABLE closure ADD COLUMN IF NOT EXISTS club_id integer REFERENCES club(id) ON DELETE CASCADE",
+    "ALTER TABLE login_token ADD COLUMN IF NOT EXISTS invite_id integer REFERENCES invite(id) ON DELETE SET NULL",
 ]
 
 
@@ -64,6 +69,7 @@ def create_app(config: dict | None = None) -> Flask:
         SMTP_USER=os.environ.get("SMTP_USER", ""), SMTP_PASSWORD=os.environ.get("SMTP_PASSWORD", ""),
         MAIL_FROM=os.environ.get("MAIL_FROM", "Ride Leader Kit <no-reply@localhost>"),
         DEV_SHOW_LOGIN_LINK=os.environ.get("DEV_SHOW_LOGIN_LINK", "1") == "1",
+        INVITE_REQUIRED=os.environ.get("INVITE_REQUIRED", "1") == "1",   # sign-in needs a club invite code the first time
         CONTROLLER_NAME=os.environ.get("CONTROLLER_NAME", ""), CONTROLLER_CONTACT=os.environ.get("CONTROLLER_CONTACT", ""),
         STRAVA_MODE=os.environ.get("STRAVA_MODE", "off"),                # off | mock | live
         STRAVA_CLIENT_ID=os.environ.get("STRAVA_CLIENT_ID", ""), STRAVA_CLIENT_SECRET=os.environ.get("STRAVA_CLIENT_SECRET", ""),
@@ -93,7 +99,9 @@ def create_app(config: dict | None = None) -> Flask:
     from . import account, auth, club_views, conditions_views, security, share_views, strava_views
 
     security.init_app(app)
-    for module in (auth, account, strava_views, conditions_views, club_views, share_views):
+    from . import clubadmin
+
+    for module in (auth, account, strava_views, conditions_views, club_views, share_views, clubadmin):
         app.register_blueprint(module.bp)
 
     import click
@@ -106,6 +114,29 @@ def create_app(config: dict | None = None) -> Flask:
         from .auth import issue_login_link
         with app.test_request_context("/"):
             click.echo(issue_login_link(email))
+
+    @app.cli.command("club-invite")
+    @click.argument("club", required=False)
+    @click.option("--role", type=click.Choice(["member", "admin"]), default="member", show_default=True)
+    @click.option("--email", default=None, help="Only this address can use the code.")
+    @click.option("--days", default=30, show_default=True)
+    def club_invite(club, role, email, days):
+        """Print a new invite code for CLUB (a name or id; default the first club). The code is shown once."""
+        from . import clubs
+        from .models import Club
+        with app.app_context():
+            c = None
+            if club and club.isdigit():
+                c = db.session.get(Club, int(club))
+            elif club:
+                c = Club.query.filter(db.func.lower(Club.name) == club.lower()).first()
+            else:
+                c = Club.query.order_by(Club.id).first()
+            if c is None:
+                raise click.ClickException("No such club.")
+            _, code = clubs.create_invite(c.id, None, role=role, email=email, days=days, label="from the command line")
+            db.session.commit()
+            click.echo(f"{code}  ({role} of {c.name}, {days} days)")
 
     @app.cli.command("mail-test")
     @click.argument("to")
@@ -144,6 +175,8 @@ def create_app(config: dict | None = None) -> Flask:
                 for stmt in _ADDED_COLUMNS:
                     db.session.execute(text(stmt))
                 db.session.commit()
+                from . import clubs
+                clubs.seed_default_club()
                 from . import counties
                 counties.ensure_loaded()
             finally:

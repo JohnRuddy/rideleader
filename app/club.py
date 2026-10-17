@@ -1,5 +1,5 @@
-"""The club: one per deployment for now. Holds the settings leaders share (usual spin days, default start time,
-safety thresholds). Everyone signed in is treated as a member; the first person to sign in becomes admin."""
+"""A club's settings (usual spin days, default start time, safety thresholds). Clubs themselves, members and invite
+codes live in clubs.py. A route with no club uses the first club's settings, as it did before there were several."""
 from datetime import time
 
 from . import db
@@ -17,17 +17,14 @@ DEFAULT_SETTINGS = {
 }
 
 
-def get_club() -> Club:
-    club = db.session.get(Club, 1)
-    if club is None:
-        club = Club(id=1, name="", settings={})
-        db.session.add(club)
-        db.session.commit()
-    return club
+def get_club(club_id: int | None = None) -> Club:
+    club = db.session.get(Club, club_id or 1)
+    return club if club is not None else Club(name="", settings={})      # not saved: just defaults
 
 
-def settings() -> dict:
-    return {**DEFAULT_SETTINGS, **(get_club().settings or {})}
+def settings(club_id: int | None = None) -> dict:
+    stored = {k: v for k, v in (get_club(club_id).settings or {}).items() if not k.startswith("_")}
+    return {**DEFAULT_SETTINGS, **stored}
 
 
 def validate(body: dict) -> dict:

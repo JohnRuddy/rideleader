@@ -92,7 +92,7 @@ def test_sharing_needs_sign_in_and_gives_a_long_stable_link(sw):
     assert len(a["token"]) >= 20 and a["url"].endswith(f"/r/{a['token']}")
     assert share(sw)["token"] == a["token"]                                  # idempotent: the same link
     st = sw.get("/api/routes/1/share").get_json()
-    assert st == {"shared": True, "url": a["url"], "can_share": True}
+    assert st == {"shared": True, "url": a["url"], "can_share": True, "makes_copy": False, "consent_text": None}
 
 
 def test_switching_sharing_off_kills_the_link(sw):
@@ -121,17 +121,22 @@ def test_the_route_stays_private_while_the_link_works(sw):
 
 # ---------------- Strava data can never be shared ----------------
 
-def test_a_route_imported_from_strava_cannot_be_shared_even_by_its_owner(client):
+def test_a_route_imported_from_strava_is_shared_as_a_processed_copy_never_as_it_is(client):
     fake = FakeStrava()
     client.application.config.update(STRAVA_CLIENT=fake, CLOCK=lambda: NOW, WEATHER_CLIENT=FakeWeather(), WARNINGS_CLIENT=Feed([]),
                                      CLOSURE_PROVIDERS=[], HOURS_CLIENT=FakeHours())
     connect(client)
     client.get("/strava/routes")
     client.post("/strava/routes/101/import")
-    r = client.post("/api/routes/1/share")
-    assert r.status_code == 409 and "came from your Strava" in r.get_json()["error"] and "Share a copy" in r.get_json()["error"]
-    assert Ride.query.filter(Ride.share_token.isnot(None)).count() == 0
-    assert client.get("/api/routes/1/share").get_json()["can_share"] is False
+    r = client.post("/api/routes/1/share")                                    # no confirmation: nothing happens
+    assert r.status_code == 409 and r.get_json()["needs_confirm"] and "own copy" in r.get_json()["error"]
+    assert Ride.query.filter(Ride.share_token.isnot(None)).count() == 0 and Route.query.count() == 1
+    assert client.get("/api/routes/1/share").get_json()["makes_copy"] is True
+    r = client.post("/api/routes/1/share", json={"confirm_own": True})        # confirmed: the copy is shared, the import is not
+    assert r.status_code == 200 and r.get_json()["copied"] and r.get_json()["route_id"] != 1
+    assert Route.query.get(1).ride is None or Route.query.get(1).ride.share_token is None
+    copy = Route.query.get(r.get_json()["route_id"])
+    assert copy.source == "gpx" and copy.strava_route_id is None and copy.ride.share_token
 
 
 def test_even_a_forced_token_on_a_strava_route_serves_nothing(client):

@@ -1,0 +1,20 @@
+/* Club and member pages */
+.club-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.club-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.club-row:last-child { border-bottom: 0; }
+.club-main { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
+.club-name { font: 700 1.15rem/1.2 var(--display); }
+.club-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.club-actions form, form.inline { display: inline; margin: 0; }
+.badge-admin { background: var(--yellow); color: var(--yellow-ink); }
+.badge-live { background: var(--ok-bg); color: var(--ok); }
+.badge-off { background: var(--unk-bg); color: var(--muted); }
+.chip-danger { color: var(--bad); border-color: var(--bad); }
+.note-ok { padding: 10px 14px; border-left: 4px solid var(--ok); background: var(--ok-bg); border-radius: 0 var(--r-sm) var(--r-sm) 0; margin: 12px 0 0; }
+.grid2 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.fresh-code { border: 2px solid var(--ink); background: var(--raised); }
+.code-big { font: 700 clamp(1.8rem, 1.2rem + 3vw, 2.8rem)/1.1 var(--display); letter-spacing: .08em; margin: 6px 0 10px; user-select: all; word-break: break-all; }
+.row-gap { display: flex; flex-wrap: wrap; gap: 10px; }
+.leave { margin-top: 14px; }
+.danger-zone { border-color: var(--bad); }
+.invite-form { max-width: 560px; }

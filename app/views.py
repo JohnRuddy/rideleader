@@ -68,7 +68,10 @@ def upload():
         return _index(f"Couldn't read that file: {e}", 400)
 
     owner = g.user
-    route = create_route(parsed, owner_id=owner.id if owner else None, visibility="private" if owner else "club")
+    # a signed-in leader's route is shared with their club from the start (one switch makes it private); with no
+    # club to share it with it stays private; a signed-out upload is the old open kind
+    route = create_route(parsed, owner_id=owner.id if owner else None,
+                         visibility=("club" if g.get("club") else "private") if owner else "club")
     db.session.add(route)
     db.session.commit()
     return redirect(url_for("main.show", route_id=route.id))

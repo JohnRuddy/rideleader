@@ -177,7 +177,11 @@
     <section class="pane" id="pane-share" role="tabpanel" aria-labelledby="tab-share" hidden>
       <section class="block" id="share" data-base="/api/routes/{{ route.id }}" data-can="{{ 'no' if route.source == 'strava' else 'yes' }}" data-signed-in="{{ 'yes' if current_user else 'no' }}">
         <h2>Share this ride</h2>
-        <p class="muted small">Anyone with the link can see the plan, with no sign-in. The warnings and weather on it are always current. It never shows your Strava data.</p>
+        {% if current_club and current_user and route.owner_id == current_user.id and route.source != 'strava' %}
+        <label class="check club-visible"><input type="checkbox" id="club-visible" {{ 'checked' if route.visibility == 'club' }}>
+          <span>Show this route to members of <strong>{{ current_club.name }}</strong></span></label>
+        {% endif %}
+        <p class="muted small">Anyone with the link can see the plan, with no sign-in, and you can pass it on freely. The warnings and weather on it are always current. A route from Strava is never shown as it is: sharing makes your own copy, with your stops, cues and notes.</p>
         <div id="share-state" class="small"></div>
         <p class="actions">
           <button type="button" class="btn small" id="share-create" hidden>Create a share link</button>

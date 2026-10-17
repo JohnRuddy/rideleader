@@ -1,10 +1,15 @@
 """Per-request security: who is signed in, CSRF protection, and who may see or change which route.
 
 Access rules for a route:
-- Imported from Strava: only the athlete who imported it, for reading and writing. Strava data may be shown only
-  to the person it belongs to, so there is no sharing path for these routes (publishing makes a separate copy).
-- Otherwise: visible if it has no owner (legacy or signed-out upload), is shared (visibility 'club'), or is yours.
+- Imported from Strava: only the athlete who imported it, for reading and writing. Sharing one makes a separate,
+  processed copy for the club (see strava_views); the import itself is never shown to anyone else.
+- Otherwise: visible if it has no owner (legacy or signed-out upload), is yours, or is shared (visibility 'club')
+  with a club you belong to. The platform admin belongs to every club.
 - Changing a route that has an owner needs that owner. Routes with no owner stay editable by anyone, as before.
+
+Who is signed in also decides the current club (g.club): the one chosen in the club switcher, else the first.
+With INVITE_REQUIRED on, a person who belongs to no club is treated as signed out, so removing someone from
+their club takes effect on their next request.
 """
 import hmac
 import secrets
@@ -14,6 +19,7 @@ from markupsafe import Markup
 from sqlalchemy import or_
 
 from . import db
+from . import clubs
 from .models import Climb, Route, ScanJob, User, Waypoint
 
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
@@ -31,11 +37,16 @@ def csrf_input() -> Markup:
 
 
 def visible_routes_filter():
-    """SQL filter for the routes the current user may see in lists (Strava imports only for their owner)."""
+    """SQL filter for the routes the current user may see in lists: their own, and the current club's shared ones
+    (Strava imports only for their owner). Routes saved before clubs existed (no club) stay shared with everyone, as
+    they were; every route made since belongs to a club."""
     uid = g.user.id if g.get("user") else None
     own = Route.owner_id == uid if uid else False
+    club = g.get("club")
+    shared = Route.visibility == "club"
+    shared = shared & (or_(Route.club_id == club.id, Route.club_id.is_(None)) if (uid and club) else Route.club_id.is_(None))
     return or_(
-        (Route.source != "strava") & (or_(Route.owner_id.is_(None), Route.visibility == "club")),
+        (Route.source != "strava") & (Route.owner_id.is_(None) | shared),
         own,
     )
 
@@ -43,7 +54,13 @@ def visible_routes_filter():
 def can_see(route: Route, user) -> bool:
     if route.source == "strava":
         return bool(user and route.owner_id == user.id)
-    return route.owner_id is None or route.visibility == "club" or bool(user and route.owner_id == user.id)
+    if route.owner_id is None or (user and route.owner_id == user.id):
+        return True
+    if route.visibility != "club":
+        return False
+    if route.club_id is None:
+        return True                                       # saved before clubs existed: shared with everyone, as it was
+    return bool(user) and (clubs.is_platform_admin(user) or clubs.membership(user, route.club_id) is not None)
 
 
 def can_change(route: Route, user) -> bool:
@@ -84,6 +101,13 @@ def init_app(app) -> None:
     def load_user():
         uid = session.get("uid")
         g.user = db.session.get(User, uid) if uid else None
+        if g.user is not None and current_app.config.get("INVITE_REQUIRED", True) and not clubs.has_any_club(g.user):
+            session.clear()                               # removed from every club (or never joined one): signed out
+            g.user = None
+        g.clubs = clubs.clubs_for(g.user)
+        chosen = session.get("club_id")
+        g.club = next((c for c in g.clubs if c.id == chosen), g.clubs[0] if g.clubs else None)
+        g.club_admin = bool(g.user) and clubs.is_club_admin(g.user, g.club.id if g.club else None)
 
     @app.before_request
     def csrf_protect():
@@ -113,5 +137,7 @@ def init_app(app) -> None:
     @app.context_processor
     def inject_globals():
         from .strava import get_client
-        return {"current_user": g.get("user"), "strava_enabled": get_client(current_app.config) is not None,
+        return {"current_user": g.get("user"), "current_club": g.get("club"), "my_clubs": g.get("clubs") or [],
+                "is_club_admin": g.get("club_admin", False), "is_platform_admin": clubs.is_platform_admin(g.get("user")),
+                "strava_enabled": get_client(current_app.config) is not None,
                 "strava_mode": current_app.config.get("STRAVA_MODE")}

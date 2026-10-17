@@ -60,7 +60,7 @@ def nearest_by_section(waypoints: list[Waypoint], kind: str, length_m: float) ->
 
 def _closure_data(plan: Plan) -> dict:
     try:
-        out = cl.check(plan.lats, plan.lons, plan.route.dist_m, plan.start, plan.finish, cl.providers(current_app.config))
+        out = cl.check(plan.lats, plan.lons, plan.route.dist_m, plan.start, plan.finish, cl.providers(current_app.config, plan.route.club_id))
         out.pop("_hits", None)
         return out
     except Exception as e:      # never let a failing source take the whole sheet down

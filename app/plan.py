@@ -51,7 +51,7 @@ class Plan:
         self.line = ar.Line(self.lats, self.lons, route.dist_m)
         self.summaries = [pace.summary(self.start, route.length_m, g, self.planned) for g in self.groups]
         self.finish = max(datetime.fromisoformat(s["finish"]) for s in self.summaries)
-        self.settings = clubmod.settings()
+        self.settings = clubmod.settings(route.club_id)
 
     def counties(self):
         return counties.route_counties(self.lats, self.lons, self.route.dist_m)

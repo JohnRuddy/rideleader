@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}{{ club.name or 'Club' }} · Ride Leader Kit{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='clubs.css') }}">
+<script src="{{ url_for('static', filename='clubs.js') }}" defer></script>{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="eyebrow"><a href="{{ url_for('clubadmin.index') }}">Clubs</a> /</p>
+  <h1>{{ club.name or 'Unnamed club' }}</h1>
+  <p class="muted">{{ counts.members }} member{{ '' if counts.members == 1 else 's' }} · {{ counts.routes }} route{{ '' if counts.routes == 1 else 's' }} shared · {{ counts.stops }} club stop{{ '' if counts.stops == 1 else 's' }} · {{ counts.closures }} closure{{ '' if counts.closures == 1 else 's' }}.
+    Members of this club share its routes, stops and closures with each other. Nobody else can see them.</p>
+  {% for cat, msg in notes %}<p class="{{ 'error' if cat == 'error' else 'note-ok' }}" role="{{ 'alert' if cat == 'error' else 'status' }}">{{ msg }}</p>{% endfor %}
+</section>
+
+{% if fresh %}
+<section class="card fresh-code" aria-live="polite">
+  <p class="eyebrow">New invite code</p>
+  <p class="code-big" id="fresh-code">{{ fresh.code }}</p>
+  <p class="small">{{ 'Makes the person a club admin.' if fresh.role == 'admin' else 'Joins as a member.' }}
+    {% if fresh.email %}Only works for <strong>{{ fresh.email }}</strong>.{% endif %}
+    Works until {{ fresh.expires }}{% if fresh.max_uses %}, up to {{ fresh.max_uses }} time{{ '' if fresh.max_uses == 1 else 's' }}{% endif %}.</p>
+  <p class="row-gap">
+    <button type="button" class="btn" data-copy="{{ fresh.code }}">Copy the code</button>
+    <button type="button" class="btn ghost" data-copy="{{ fresh.link }}">Copy a sign-in link with the code filled in</button>
+  </p>
+  <p class="warn small">This is the only time the code is shown. Send it to the person yourself (WhatsApp, email, in person).</p>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Members</h2>
+  <ul class="club-list">
+    {% for m, u in members %}
+    <li class="club-row">
+      <div class="club-main">
+        <strong>{{ u.display_name or u.email }}</strong>
+        {% if u.display_name %}<span class="muted small">{{ u.email }}</span>{% endif %}
+        <span class="badge {{ 'badge-admin' if m.role == 'admin' else '' }}">{{ 'admin' if m.role == 'admin' else 'member' }}</span>
+        {% if u.id == current_user.id %}<span class="muted small">(you)</span>{% endif %}
+        <span class="muted small">joined {{ m.joined_at.strftime('%d %b %Y') if m.joined_at else '' }}</span>
+      </div>
+      {% if admin %}
+      <div class="club-actions">
+        <form method="post" action="{{ url_for('clubadmin.member_role', club_id=club.id, user_id=u.id) }}" class="inline">
+          {{ csrf_input() }}<input type="hidden" name="role" value="{{ 'member' if m.role == 'admin' else 'admin' }}">
+          <button type="submit" class="chip">{{ 'Make member' if m.role == 'admin' else 'Make admin' }}</button></form>
+        {% if u.id != current_user.id %}
+        <form method="post" action="{{ url_for('clubadmin.member_remove', club_id=club.id, user_id=u.id) }}" class="inline"
+              onsubmit="return confirm('Remove {{ u.email }} from {{ club.name }}? They will lose access to the club\'s routes, stops and closures.')">
+          {{ csrf_input() }}<button type="submit" class="chip chip-danger">Remove</button></form>
+        {% endif %}
+      </div>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% if not platform_admin or members|selectattr('1.id', 'equalto', current_user.id)|list %}
+  <form method="post" action="{{ url_for('clubadmin.leave', club_id=club.id) }}" onsubmit="return confirm('Leave {{ club.name }}?')" class="leave">
+    {{ csrf_input() }}<button type="submit" class="linkbtn muted small">Leave this club</button></form>
+  {% endif %}
+</section>
+
+{% if admin %}
+<section class="card">
+  <h2>Invite people</h2>
+  <p class="muted">Make a code and send it to them. They enter it once, with their email, the first time they sign in; after that they only need their email. Anyone with an unused, unexpired code can join, so send it only to the people you mean.</p>
+  <form method="post" action="{{ url_for('clubadmin.invite', club_id=club.id) }}" class="stack invite-form">
+    {{ csrf_input() }}
+    <label>Label <span class="muted small">(for your own reference)</span> <input type="text" name="label" maxlength="80" placeholder="Spring new riders"></label>
+    <div class="grid2">
+      <label>Joins as
+        <select name="role"><option value="member">Member</option><option value="admin">Club admin</option></select></label>
+      <label>Lasts for
+        <select name="days"><option value="7">7 days</option><option value="30" selected>30 days</option><option value="90">90 days</option><option value="365">1 year</option></select></label>
+    </div>
+    <div class="grid2">
+      <label>Limit uses <span class="muted small">(blank = no limit)</span> <input type="number" name="max_uses" min="1" max="10000" inputmode="numeric" placeholder="e.g. 1"></label>
+      <label>Only for this email <span class="muted small">(optional)</span> <input type="email" name="email" maxlength="254" placeholder="rider@example.com"></label>
+    </div>
+    <button type="submit" class="btn">Make an invite code</button>
+  </form>
+
+  {% if invites %}
+  <h3>Codes</h3>
+  <ul class="club-list">
+    {% for i in invites %}
+    {% set live = not i.revoked_at and i.expires_at > now and (i.max_uses is none or i.uses < i.max_uses) %}
+    <li class="club-row">
+      <div class="club-main">
+        <strong>•••••-••{{ i.hint }}</strong>
+        {% if i.label %}<span>{{ i.label }}</span>{% endif %}
+        <span class="badge {{ 'badge-admin' if i.role == 'admin' else '' }}">{{ 'admin' if i.role == 'admin' else 'member' }}</span>
+        <span class="badge {{ 'badge-live' if live else 'badge-off' }}">{{ 'works' if live else ('revoked' if i.revoked_at else ('used up' if (i.max_uses is not none and i.uses >= i.max_uses) else 'expired')) }}</span>
+        <span class="muted small">{{ i.uses }}{% if i.max_uses %}/{{ i.max_uses }}{% endif %} use{{ '' if i.uses == 1 else 's' }} · until {{ i.expires_at.strftime('%d %b %Y') }}{% if i.email %} · for {{ i.email }}{% endif %}</span>
+      </div>
+      {% if live %}
+      <form method="post" action="{{ url_for('clubadmin.revoke', club_id=club.id, invite_id=i.id) }}" class="inline">{{ csrf_input() }}<button type="submit" class="chip chip-danger">Revoke</button></form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Club name</h2>
+  <form method="post" action="{{ url_for('clubadmin.rename', club_id=club.id) }}" class="stack">
+    {{ csrf_input() }}
+    <label>Name <input type="text" name="name" value="{{ club.name }}" minlength="2" maxlength="120" required></label>
+    <button type="submit" class="btn ghost">Rename</button>
+  </form>
+</section>
+
+{% if platform_admin %}
+<section class="card danger-zone">
+  <h2>Delete this club</h2>
+  <p class="muted small">Removes the club, its members' links to it, its invite codes, shared stops and closures. People's own routes stay with them but are no longer shared. This can't be undone.</p>
+  <form method="post" action="{{ url_for('clubadmin.delete', club_id=club.id) }}" class="stack">
+    {{ csrf_input() }}
+    <label>Type the club's name to confirm <input type="text" name="confirm_name" autocomplete="off" placeholder="{{ club.name }}"></label>
+    <button type="submit" class="btn ghost chip-danger">Delete club</button>
+  </form>
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}

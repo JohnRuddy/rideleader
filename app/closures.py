@@ -86,10 +86,14 @@ class ClubClosures:
     name, label = "club", "Closures entered by leaders and the club"
     coverage = "Wherever a leader has entered one. Always checked."
 
+    def __init__(self, club_id: int | None = None):
+        self.club_id = club_id
+
     def fetch(self, bbox, start, end):
         from geoalchemy2.shape import to_shape
         items = []
-        for c in Closure.query.filter(Closure.starts_at <= end, Closure.ends_at >= start).all():
+        scope = Closure.club_id == self.club_id if self.club_id else Closure.club_id.is_(None)
+        for c in Closure.query.filter(Closure.starts_at <= end, Closure.ends_at >= start, scope).all():
             items.append(RawClosure(f"club:{c.id}", "club", c.description, to_shape(c.geom), c.starts_at, c.ends_at,
                                     None, c.radius_m))
         return SourceResult(self.name, self.label, self.coverage, items, fetched_at=datetime.now(timezone.utc))
@@ -260,11 +264,11 @@ def avoid_circles(hit: dict, max_circles: int = 8) -> list[tuple[float, float, f
 
 # ------------------------------------------------------------------ the whole check
 
-def providers(config) -> list[TrafficProvider]:
+def providers(config, club_id: int | None = None) -> list[TrafficProvider]:
     if config.get("CLOSURE_PROVIDERS") is not None:
         return config["CLOSURE_PROVIDERS"]
     from .overpass import get_client
-    out: list[TrafficProvider] = [ClubClosures(), OsmRoadworks(config.get("OVERPASS_CLIENT") or get_client(config, interactive=True))]
+    out: list[TrafficProvider] = [ClubClosures(club_id), OsmRoadworks(config.get("OVERPASS_CLIENT") or get_client(config, interactive=True))]
     for src in json.loads(config.get("ARCGIS_CLOSURE_SOURCES") or "[]"):
         out.append(ArcGisClosures(src["name"], src["label"], src["url"], src["mapping"], src.get("coverage", "")))
     return out

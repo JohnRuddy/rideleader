@@ -53,7 +53,7 @@ def client():
     app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": os.environ.get(
         "TEST_DATABASE_URL", os.environ.get("DATABASE_URL")),
         "ROUTING_CLIENT": OfflineRouter(), "ELEVATION_CLIENT": OfflineElevation(),
-        "CSRF_ENABLED": False, "RATELIMIT_ENABLED": False, "STRAVA_MODE": "off", "STRAVA_CLIENT": None, "MAILER": CaptureMailer(), "SECRET_KEY": "test-secret-key"})
+        "CSRF_ENABLED": False, "RATELIMIT_ENABLED": False, "STRAVA_MODE": "off", "STRAVA_CLIENT": None, "MAILER": CaptureMailer(), "SECRET_KEY": "test-secret-key", "INVITE_REQUIRED": False})
     with app.app_context():
         yield app.test_client()
         db.session.rollback()

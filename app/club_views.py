@@ -4,25 +4,30 @@ from datetime import datetime, timezone
 
 from flask import Blueprint, abort, g, jsonify, render_template, request
 
-from . import categories, club_stops, db
+from . import categories, club_stops, clubs, db
 from .models import ClubStop, Waypoint
 from .security import login_required
 
 bp = Blueprint("club", __name__)
 
 
+def _stops():
+    """This club's stops only: a club's library is shared by its members and nobody else."""
+    return clubs.scoped(ClubStop.query.filter_by(active=True), ClubStop).order_by(ClubStop.kind, ClubStop.name)
+
+
 @bp.get("/club/stops")
 @login_required
 def page():
-    stops = ClubStop.query.filter_by(active=True).order_by(ClubStop.kind, ClubStop.name).all()
+    stops = _stops().all()
     return render_template("club_stops.html", stops=[club_stops.stop_json(s) for s in stops], categories=categories.public_json(),
-                           admin=g.user.role == "admin")
+                           admin=g.user.role == "admin" or g.club_admin)
 
 
 @bp.get("/api/club/stops")
 @login_required
 def list_stops():
-    return jsonify([club_stops.stop_json(s) for s in ClubStop.query.filter_by(active=True).order_by(ClubStop.kind, ClubStop.name).all()])
+    return jsonify([club_stops.stop_json(s) for s in _stops().all()])
 
 
 @bp.post("/api/club/stops")
@@ -32,7 +37,7 @@ def add():
         fields = club_stops.validate(request.get_json(silent=True) or {})
     except ValueError as e:
         return jsonify(error=str(e)), 400
-    s = ClubStop(**fields, active=True, created_by=g.user.id)
+    s = ClubStop(**fields, active=True, created_by=g.user.id, club_id=clubs.current_club_id())
     if (request.get_json(silent=True) or {}).get("verified"):
         s.verified_by, s.last_verified_at = g.user.id, datetime.now(timezone.utc)
     db.session.add(s)
@@ -44,6 +49,8 @@ def _get(stop_id) -> ClubStop:
     s = db.session.get(ClubStop, stop_id)
     if s is None or not s.active:
         abort(404)
+    if s.club_id != clubs.current_club_id() and not clubs.is_platform_admin(g.user):
+        abort(404)                                        # another club's stop: not even a hint it exists
     return s
 
 
@@ -75,7 +82,7 @@ def verify(stop_id):
 @login_required
 def remove(stop_id):
     s = _get(stop_id)
-    if s.created_by != g.user.id and g.user.role != "admin":
+    if s.created_by != g.user.id and g.user.role != "admin" and not g.club_admin:
         abort(403, description="Only the person who added a stop, or a club admin, can remove it.")
     db.session.delete(s)
     db.session.commit()

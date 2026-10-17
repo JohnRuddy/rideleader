@@ -1,14 +1,18 @@
 """Sharing a ride: a link anyone can open (no sign-in), the WhatsApp text, the printable cue card, and a leader's preview.
 
-The link is the capability: a long random token, not guessable, revocable by the leader. A route that came from Strava
-can never be shared, because Strava data may only ever be shown to the athlete it belongs to: they have to publish
-their own copy to the club first (see strava_views)."""
+The link is the capability: a long random token, not guessable, revocable by the leader. Anyone who has it can open
+the sheet, signed in or not, and it can be passed on freely.
+
+A route that came from Strava is never shown as it is: sharing it makes the leader's own processed copy (their stops,
+cues, ride plan and notes, stored as a route file they own, separate from Strava) after one confirmation, and shares
+that. The confirmation is logged. See strava_service.publish_to_club."""
 import secrets
 
 from flask import Blueprint, Response, abort, current_app, g, jsonify, render_template, request, url_for
 
 from . import cue_card, db
 from . import ride_sheet as rs
+from . import strava_service as svc
 from .models import Ride, Route
 from .plan import Plan, get_or_create_ride
 from .security import login_required
@@ -55,14 +59,43 @@ def _safe(resp: Response) -> Response:
 @login_required
 def share(route_id):
     route = db.session.get(Route, route_id) or abort(404)
+    copied = False
     if route.source == "strava":
-        return jsonify(error="This route came from your Strava, so it can't be shared as it is. Share a copy with your club first "
-                             "(Share a copy with your club on the route page), then share that."), 409
+        body = request.get_json(silent=True) or {}
+        if not body.get("confirm_own"):
+            return jsonify(error="Sharing makes your own copy of this route, with your stops, cues and notes, and shares that.",
+                           needs_confirm=True, consent_text=svc.PUBLISH_CONSENT_TEXT), 409
+        try:
+            route = svc.publish_to_club(g.user, route, True)
+        except PermissionError as e:
+            abort(403, description=str(e))
+        copied = True
     ride = get_or_create_ride(route)
     if not ride.share_token:
         ride.share_token = secrets.token_urlsafe(16)
         db.session.commit()
-    return jsonify({"token": ride.share_token, "url": _share_url(ride.share_token)})
+    return jsonify({"token": ride.share_token, "url": _share_url(ride.share_token), "route_id": route.id, "copied": copied,
+                    "copy_url": url_for("main.show", route_id=route.id)})
+
+
+@bp.put("/api/routes/<int:route_id>/visibility")
+@login_required
+def set_visibility(route_id):
+    """Show a route to the members of the leader's club, or keep it to themselves."""
+    route = db.session.get(Route, route_id) or abort(404)
+    v = (request.get_json(silent=True) or {}).get("visibility")
+    if v not in ("club", "private"):
+        return jsonify(error="Choose club or private."), 400
+    if v == "club":
+        if route.source == "strava":
+            return jsonify(error="A Strava route stays yours. Share it to make a copy for the club."), 409
+        if route.club_id is None:
+            if not g.get("club"):
+                return jsonify(error="Join a club first."), 409
+            route.club_id = g.club.id
+    route.visibility = v
+    db.session.commit()
+    return jsonify({"visibility": v, "club": route.club.name if getattr(route, "club", None) else None})
 
 
 @bp.delete("/api/routes/<int:route_id>/share")
@@ -79,7 +112,8 @@ def unshare(route_id):
 def share_status(route_id):
     route = db.session.get(Route, route_id) or abort(404)
     t = get_or_create_ride(route).share_token
-    return jsonify({"shared": bool(t), "url": _share_url(t) if t else None, "can_share": route.source != "strava"})
+    return jsonify({"shared": bool(t), "url": _share_url(t) if t else None, "can_share": True,
+                    "makes_copy": route.source == "strava", "consent_text": svc.PUBLISH_CONSENT_TEXT if route.source == "strava" else None})
 
 
 # ---------------- the public page (no sign-in) ----------------

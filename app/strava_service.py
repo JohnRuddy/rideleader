@@ -16,7 +16,7 @@ from geoalchemy2.shape import to_shape
 
 from . import crypto, db
 from .mailer import get_mailer
-from .models import ConsentLog, Route, StravaConnection, StravaRouteCache, User, Waypoint
+from .models import ConsentLog, PaceGroup, Ride, Route, StravaConnection, StravaRouteCache, User, Waypoint
 from .route_factory import create_route
 from .routemodel import parse_gpx
 from .strava import StravaClient, StravaError, StravaNotFound, StravaUnauthorized, TokenSet
@@ -323,6 +323,12 @@ def revalidate(client: StravaClient, now=None, max_calls: int = REVALIDATE_MAX_C
 
 # ------------------------------------------------------------------ publishing to the club
 
+def _club_of(user: User) -> int | None:
+    from flask import g, has_request_context
+    club = g.get("club") if has_request_context() else None
+    return club.id if club else None
+
+
 def publish_to_club(user: User, route: Route, confirmed: bool, now=None) -> Route:
     """Make the club's own copy of a route the leader imported from Strava.
 
@@ -334,7 +340,7 @@ def publish_to_club(user: User, route: Route, confirmed: bool, now=None) -> Rout
     if not confirmed:
         raise ValueError("Please confirm that this is your own route and you are sharing it with your club.")
     coords = list(to_shape(route.geom).coords)
-    copy = Route(title=route.title, source="gpx", owner_id=user.id, visibility="club",
+    copy = Route(title=route.title, source="gpx", owner_id=user.id, visibility="club", club_id=route.club_id or _club_of(user),
                  geom=WKTElement("LINESTRING(" + ",".join(f"{x} {y}" for x, y in coords) + ")", srid=4326),
                  length_m=route.length_m, ascent_m=route.ascent_m, descent_m=route.descent_m,
                  dist_m=list(route.dist_m), ele_m=list(route.ele_m) if route.ele_m else None)
@@ -345,6 +351,12 @@ def publish_to_club(user: User, route: Route, confirmed: bool, now=None) -> Rout
                 kind=w.kind, name=w.name, note=w.note, s_m=w.s_m, offset_m=w.offset_m, side=w.side, pinned=w.pinned,
                 included=w.included, origin=w.origin, osm_ref=w.osm_ref, tags=w.tags, planned_stop=w.planned_stop,
                 geom=WKTElement(f"POINT({p.x} {p.y})", srid=4326)))
+    if route.ride is not None:                       # the leader's own plan travels with the copy
+        r = route.ride
+        copy.ride = Ride(date=r.date, start_time=r.start_time, tz=r.tz, meeting_name=r.meeting_name, meeting_lat=r.meeting_lat,
+                         meeting_lon=r.meeting_lon, leader_phone=r.leader_phone, notes=r.notes,
+                         groups=[PaceGroup(position=g.position, name=g.name, speed_kmh=g.speed_kmh, stop_min=g.stop_min)
+                                 for g in r.groups])
     db.session.add(copy)
     record_consent(user, "strava_publish", PUBLISH_CONSENT_VERSION, PUBLISH_CONSENT_TEXT, {"source_route_id": route.id}, now)
     db.session.commit()

@@ -57,7 +57,7 @@ def save_from_waypoint(w: Waypoint, user_id: int) -> ClubStop:
     from geoalchemy2.elements import WKTElement
     p = to_shape(w.geom)
     now = datetime.now(timezone.utc)
-    stop = ClubStop(kind=w.kind if w.kind in categories.BY_KEY else "generic", name=w.name, note=w.note,
+    stop = ClubStop(club_id=w.route.club_id, kind=w.kind if w.kind in categories.BY_KEY else "generic", name=w.name, note=w.note,
                     hours=(w.club_hours or (w.tags or {}).get("opening_hours")), geom=WKTElement(f"POINT({p.x} {p.y})", srid=4326),
                     verified_by=user_id, last_verified_at=now, active=True, created_by=user_id)
     db.session.add(stop)
@@ -66,10 +66,12 @@ def save_from_waypoint(w: Waypoint, user_id: int) -> ClubStop:
     return stop
 
 
-def club_pois(enabled: set[str]) -> list[dict]:
-    """Active library stops as scan candidates (same shape as normalised OSM elements, plus the club's own details)."""
+def club_pois(enabled: set[str], club_id: int | None = None) -> list[dict]:
+    """Active library stops of one club as scan candidates (same shape as normalised OSM elements, plus the club's
+    own details). A route with no club sees the stops that belong to none."""
     out = []
-    for s in ClubStop.query.filter_by(active=True).all():
+    scope = ClubStop.club_id == club_id if club_id else ClubStop.club_id.is_(None)
+    for s in ClubStop.query.filter_by(active=True).filter(scope).all():
         if s.kind not in enabled and s.kind != "generic":
             continue
         p = to_shape(s.geom)

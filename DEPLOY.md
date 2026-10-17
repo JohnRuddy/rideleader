@@ -34,9 +34,26 @@ internet -> Caddy (checkmysitemap stack) --edge network--> rideleader-web:8431
 
 Merge to `main`. That is the deploy. Check the Actions run, or `curl https://<domain>/healthz`.
 
-## First sign-in (before email is set up)
+## Clubs, invite codes and first sign-in
 
-Sign-in links are emailed. Until `SMTP_*` is configured, print one on the server:
+People sign in with an emailed link, and the first time they also enter an **invite code** from a club admin.
+Roles: the **site admin** (you; the first person ever to sign in) creates clubs; a **club admin** invites and removes
+people in their club; **members** share routes, stops and closures inside their club. A sample club called "Velo Club"
+exists from the start.
+
+Make a code from the site (Club name in the top bar, then Invite people), or on the server:
+
+```
+cd /opt/rideleader
+docker compose -f docker-compose.prod.yml exec rl-web flask --app app club-invite "Velo Club" --role admin
+```
+
+The code is shown once; only a hash is stored. Removing someone from their last club signs them out on their next click.
+
+## First sign-in when email is down
+
+Sign-in links are emailed. If email is not working, print one on the server (this works for the site admin and for
+anyone already in a club):
 
 ```
 cd /opt/rideleader
