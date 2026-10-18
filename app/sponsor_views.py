@@ -11,9 +11,9 @@ from datetime import date, timedelta
 from flask import (Blueprint, Response, abort, current_app, flash, g, get_flashed_messages, jsonify, redirect, render_template,
                    request, url_for)
 
-from . import billing, clubs, db, ratelimit, sponsors
+from . import billing, clubs, db, ratelimit, sponsors, stripe_billing
 from . import club as clubmod
-from .models import Route, Sponsor, SponsorCampaign
+from .models import ClubBilling, Route, Sponsor, SponsorCampaign
 from .security import login_required
 
 bp = Blueprint("sponsors", __name__)
@@ -85,7 +85,8 @@ def home():
                            value=sponsors.VALUE_STATEMENT, empty=sponsors.EMPTY_STATE, tz=sponsors.club_timezone(club.id).key,
                            rotation=bool(clubmod.settings(club.id).get("sponsor_rotation")), today=today,
                            platform_admin=clubs.is_platform_admin(g.user), notes=_notes(), can_manage=state["serving"],
-                           embed=sponsors.active_embed(club.id))
+                           embed=sponsors.active_embed(club.id), stripe_on=stripe_billing.enabled(),
+                           billing=ClubBilling.query.filter_by(club_id=club.id).first())
 
 
 @bp.post("/sponsors/settings")

@@ -76,6 +76,9 @@ gunzip -c backups/<file>.sql.gz | docker compose -f docker-compose.prod.yml exec
 
 - **Strava**: leave `STRAVA_MODE=off` until the Strava application's Authorization Callback Domain is changed from
   `localhost` to the production hostname, then set `STRAVA_MODE=live` with the client id and secret in `PROD_ENV`.
+- **Card billing (Club Sponsor Publishing)**: leave `STRIPE_SECRET_KEY` empty to keep it off (the site admin can still activate clubs by
+  hand). To switch it on, follow [docs/BILLING.md](docs/BILLING.md): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, optionally
+  `STRIPE_PRICE_ID`, `STRIPE_AUTOMATIC_TAX`, `STRIPE_TAX_BEHAVIOR` and `PREMIUM_GRACE_DAYS` go in `PROD_ENV`. Use Stripe **test** keys first.
 - **Map data**: production uses the public Overpass and BRouter servers (fair-use throttled). The `maps` profile in
   `docker-compose.yml` runs your own, which needs several GB of disk and a long first import, so it is not on this
   shared server by default.

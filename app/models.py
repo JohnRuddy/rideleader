@@ -335,7 +335,7 @@ class ClubPremium(db.Model):
     club_id = db.Column(db.Integer, db.ForeignKey("club.id", ondelete="CASCADE"), unique=True, nullable=False)
     plan = db.Column(db.String(30), nullable=False, default="club_sponsor_annual")
     status = db.Column(db.String(12), nullable=False, default="active")          # active | cancelled
-    price_cents = db.Column(db.Integer, nullable=False, default=1999)
+    price_cents = db.Column(db.Integer, nullable=False, default=7999)
     currency = db.Column(db.String(3), nullable=False, default="EUR")
     starts_at = db.Column(db.DateTime(timezone=True), nullable=False)
     expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
@@ -411,3 +411,52 @@ class ClubEmbed(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=_now)
     created_by = db.Column(db.Integer, db.ForeignKey("app_user.id", ondelete="SET NULL"))
     revoked_at = db.Column(db.DateTime(timezone=True))
+
+
+class ClubBilling(db.Model):
+    """What we know of a club's card billing (Stripe). The premium entitlement itself is ClubPremium; this only links the
+    club to its Stripe customer and subscription and mirrors their state for the Billing page."""
+    __tablename__ = "club_billing"
+    id = db.Column(db.Integer, primary_key=True)
+    club_id = db.Column(db.Integer, db.ForeignKey("club.id", ondelete="CASCADE"), unique=True, nullable=False)
+    customer_id = db.Column(db.String(64), unique=True)
+    subscription_id = db.Column(db.String(64))
+    sub_status = db.Column(db.String(24))                      # active | trialing | past_due | canceled | unpaid | incomplete ...
+    cancel_at_period_end = db.Column(db.Boolean, nullable=False, default=False)
+    current_period_end = db.Column(db.DateTime(timezone=True))
+    last_payment_failed_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), default=_now)
+    updated_at = db.Column(db.DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class BillingInvoice(db.Model):
+    """A copy of a Stripe invoice's headline facts and its download links, kept so the club can always find its invoices
+    and receipts. The documents themselves live at Stripe; we store only the links."""
+    __tablename__ = "billing_invoice"
+    id = db.Column(db.Integer, primary_key=True)
+    club_id = db.Column(db.Integer, db.ForeignKey("club.id", ondelete="CASCADE"), index=True, nullable=False)
+    stripe_invoice_id = db.Column(db.String(64), unique=True, nullable=False)
+    number = db.Column(db.String(64))
+    status = db.Column(db.String(16))                          # draft | open | paid | void | uncollectible
+    amount_due = db.Column(db.Integer, nullable=False, default=0)
+    amount_paid = db.Column(db.Integer, nullable=False, default=0)
+    tax = db.Column(db.Integer)
+    amount_refunded = db.Column(db.Integer, nullable=False, default=0)
+    currency = db.Column(db.String(3), nullable=False, default="EUR")
+    description = db.Column(db.String(200))
+    period_start = db.Column(db.DateTime(timezone=True))
+    period_end = db.Column(db.DateTime(timezone=True))
+    hosted_url = db.Column(db.String(500))
+    pdf_url = db.Column(db.String(500))
+    receipt_url = db.Column(db.String(500))
+    issued_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), default=_now)
+    updated_at = db.Column(db.DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class BillingEvent(db.Model):
+    """Stripe events already applied, so a repeated delivery changes nothing."""
+    __tablename__ = "billing_event"
+    event_id = db.Column(db.String(80), primary_key=True)
+    type = db.Column(db.String(80), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), default=_now)

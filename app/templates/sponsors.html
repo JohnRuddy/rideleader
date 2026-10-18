@@ -19,7 +19,14 @@
     <p class="note">You can still read your sponsors, campaigns and reports. Nothing is being shown on ride sheets or your website, and riders' shared links work as normal.
       {% if not platform_admin %}To switch it on, ask the site admin to activate it for {{ club.name }}.{% endif %}</p>
   {% endif %}
-  <p class="muted small">The club keeps all of its sponsorship income. {{ price }} is for the software, not a share of what a sponsor pays you. Online payment isn't connected yet, so the site admin switches it on after payment.</p>
+  <p class="muted small">The club keeps all of its sponsorship income. {{ price }} is for the software, not a share of what a sponsor pays you.{% if not stripe_on %} Card payment isn't switched on yet, so the site admin activates it after payment.{% endif %}</p>
+  {% if stripe_on and not (billing and billing.sub_status in ('active', 'trialing', 'past_due') and not billing.cancel_at_period_end) %}
+  <form method="post" action="{{ url_for('billing.checkout') }}" class="inline-form">
+    {{ csrf_input() }}
+    <button class="btn">{{ 'Renew' if state.state in ('active', 'expired') else 'Activate' }} by card: {{ price }}</button>
+    <span class="muted small">Paid securely through Stripe. An invoice and a receipt are available to download afterwards.</span>
+  </form>
+  {% endif %}
   {% if platform_admin %}
   <form method="post" action="{{ url_for('sponsors.premium') }}" class="inline-form">
     {{ csrf_input() }}
@@ -102,6 +109,7 @@
 
 <section class="card tiles">
   <a class="tile" href="{{ url_for('sponsors.embed_setup') }}"><b>Website widget</b><span>Show your sponsor on your club website.{% if embed %} Switched on.{% endif %}</span></a>
+  <a class="tile" href="{{ url_for('billing.page') }}"><b>Billing and invoices</b><span>Your subscription, invoices and receipts to download.</span></a>
   <a class="tile" href="{{ url_for('sponsors.reports') }}"><b>Reports</b><span>Requests, panel deliveries and recorded clicks, with a CSV and a page to share.</span></a>
 </section>
 {% endblock %}

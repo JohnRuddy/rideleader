@@ -23,7 +23,7 @@ from . import clubs
 from .models import Climb, Route, ScanJob, User, Waypoint
 
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
-CSRF_EXEMPT = {"strava.webhook"}      # called by Strava servers, with no browser session to protect
+CSRF_EXEMPT = {"strava.webhook", "billing.webhook"}      # called by Strava / Stripe servers, with no browser session to protect (Stripe's is signature-checked)
 
 
 def csrf_token() -> str:

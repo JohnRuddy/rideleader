@@ -1,8 +1,8 @@
 # Club Sponsor Publishing
 
-A premium feature for clubs: **€19.99 per club per year**. A club puts its own sponsors on its shared ride sheets and on its
+A premium feature for clubs: **€79.99 per club per year**. A club puts its own sponsors on its shared ride sheets and on its
 own website, and gets plain, honestly labelled reports. Riders need no account and nothing is added to the platform's own
-pages. There is no ad network, no auction, no third-party ad code and no revenue share: the €19.99 is for the software.
+pages. There is no ad network, no auction, no third-party ad code and no revenue share: the €79.99 is for the software.
 
 Branch: `sponsored_version`. **Not deployed.** Nothing here takes a payment or sends an email.
 
@@ -27,11 +27,11 @@ Screenshots are in [docs/sponsors](sponsors/): `admin-dashboard-desktop.jpg`, `a
 
 ## Premium: how it is attached, and the billing integration point
 
-Premium belongs to the **club** (`ClubPremium`, one row per club: `status active|cancelled`, `starts_at`, `expires_at`, `price_cents` 1999, `currency` EUR, `source manual|billing`, `external_ref`).
+Premium belongs to the **club** (`ClubPremium`, one row per club: `status active|cancelled`, `starts_at`, `expires_at`, `price_cents` 7999, `currency` EUR, `source manual|billing`, `external_ref`).
 
-- The repository had no billing, so premium is switched on by the **site admin** (Sponsors page → *Site admin: record payment*). That records that the club has paid elsewhere. **No money is taken and nothing is marked paid automatically.**
+- Premium is switched on in one of two ways: **by card**, through Stripe (see [BILLING.md](BILLING.md)), or by the **site admin** (Sponsors page → *Site admin: record payment*) for a club that paid some other way. A club is only ever marked paid by a person or by a signature-verified Stripe event, never by a value from the browser.
 - State is *derived*, never stored as "expired": `none`, `pending`, `active`, `expired`, `cancelled` (`app/sponsors.py:premium_state`). Only `serving` decides whether anything is shown.
-- **The integration point is `app/billing.py`.** `activate()` and `cancel()` are what a payment provider's webhook should call; `handle_provider_event()` is a stub that raises `NotImplementedError` and documents what to implement (verify the signature, map the customer to a club, call `activate(..., source="billing", reference=...)`). Nothing else needs to change.
+- **`app/billing.py`** is the only writer of `ClubPremium`: `activate()` (manual, by months), `activate_until()` (card: runs to the end of the period Stripe was paid for, and never shortens a paid period) and `cancel()`. `app/stripe_billing.py` calls it from verified Stripe events.
 - **After expiry** (plus `PREMIUM_GRACE_DAYS`, default `0`): panels and the widget stop; clicks on old panels show a short "offer has ended" page; shared ride links, route planning and every other feature keep working; sponsors, campaigns and reports stay visible; nothing can be created or published. No platform ad ever replaces a sponsor. A campaign existing is never read as premium being active.
 
 ## Which sponsor a ride shows
@@ -86,14 +86,14 @@ Reports: `/sponsors/reports` (date range, per campaign), `/sponsors/report` (pri
 
 ## Configuration and migrations
 
-- **Migrations:** automatic at start-up (`_ADDED_COLUMNS` + `db.create_all()` under the existing advisory lock): new tables `club_premium`, `sponsor`, `sponsor_campaign`, `sponsor_daily`, `club_embed`; new columns `route.reused_from_id`, `route.series_root_id`, `ride.sponsor_mode`, `ride.sponsor_campaign_id`. All additive and idempotent.
-- **Config:** `PREMIUM_GRACE_DAYS` (env, default `0`). Club settings `timezone` and `sponsor_rotation` are edited on the Sponsors page.
+- **Migrations:** automatic at start-up (`_ADDED_COLUMNS` + `db.create_all()` under the existing advisory lock): new tables `club_premium`, `sponsor`, `sponsor_campaign`, `sponsor_daily`, `club_embed`, `club_billing`, `billing_invoice`, `billing_event`; new columns `route.reused_from_id`, `route.series_root_id`, `ride.sponsor_mode`, `ride.sponsor_campaign_id`. All additive and idempotent.
+- **Config:** `PREMIUM_GRACE_DAYS` (env, default `0`; `7` is sensible with card billing so a late retry doesn't switch panels off) and the `STRIPE_*` settings in [BILLING.md](BILLING.md). Club settings `timezone` and `sponsor_rotation` are edited on the Sponsors page.
 - **Proxy:** `deploy/rideleader.caddy.tmpl` now sends `X-Frame-Options: SAMEORIGIN` on everything except `/embed/*`, so the widget can be framed by club sites (the app itself also sets `frame-ancestors *` for that path only). Validated with Caddy 2; **not deployed**: it must be rolled out with the release or the widget will be blocked in production.
 - Ride sheets are still served fresh. They contain some small functional inline scripts that existed before; the sponsor panel adds none.
 
 ## Tests
 
-`tests/test_sponsors.py` (82 tests): premium states, expiry and grace, platform-admin-only activation, tenant isolation on every sponsor/campaign/report/CSV/embed route, campaign phases and timezone, placement flags, selection precedence, none/explicit/rotation, panel markup and position, print line, expiry keeps links alive, run-again and historical reporting, widget content/headers/revocation, click redirect and open-redirect attempts, bot/preview filtering, honest report labels, CSV isolation and formula safety, validation, logo handling and a no-ad-tech check. Run alone (shared test database):
+`tests/test_sponsors.py` (82 tests) and `tests/test_billing_stripe.py` (35 tests, see BILLING.md). The sponsor tests cover: premium states, expiry and grace, platform-admin-only activation, tenant isolation on every sponsor/campaign/report/CSV/embed route, campaign phases and timezone, placement flags, selection precedence, none/explicit/rotation, panel markup and position, print line, expiry keeps links alive, run-again and historical reporting, widget content/headers/revocation, click redirect and open-redirect attempts, bot/preview filtering, honest report labels, CSV isolation and formula safety, validation, logo handling and a no-ad-tech check. Run alone (shared test database):
 
 ```
 docker compose run --rm -e TEST_DATABASE_URL=postgresql+psycopg://rlk:rlk_dev_only@db:5432/rlk_test web pytest -q -W ignore -p no:cacheprovider

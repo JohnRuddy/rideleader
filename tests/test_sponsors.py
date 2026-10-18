@@ -163,15 +163,13 @@ def test_a_documented_grace_period_keeps_serving_then_stops(world):
     assert not sponsors.premium_state(world.a.id)["serving"]
 
 
-def test_billing_extends_a_running_premium_and_never_charges(world):
+def test_manual_activation_extends_a_running_premium_and_never_charges(world):
     before = ClubPremium.query.filter_by(club_id=world.a.id).first().expires_at
     billing.activate(world.a.id, by_user_id=world.site.id, months=12, reference="INV-1")
     db.session.commit()
     p = ClubPremium.query.filter_by(club_id=world.a.id).first()
     assert p.expires_at > before + timedelta(days=360)
-    assert p.price_cents == 1999 and p.currency == "EUR" and p.source == "manual" and p.external_ref == "INV-1"
-    with pytest.raises(NotImplementedError):
-        billing.handle_provider_event({"type": "x"}, "sig")
+    assert p.price_cents == 7999 and p.currency == "EUR" and p.source == "manual" and p.external_ref == "INV-1"
 
 
 def test_only_the_platform_admin_can_switch_premium_on_or_off(world):
@@ -189,7 +187,7 @@ def test_only_the_platform_admin_can_switch_premium_on_or_off(world):
 def test_the_dashboard_shows_the_price_and_value_statement_and_never_claims_premium_when_it_is_off(world):
     c = login_new(world, world.admin_a)
     page = c.get("/sponsors").get_data(as_text=True)
-    assert "€19.99 per club per year" in page
+    assert "€79.99 per club per year" in page
     assert "Give your club sponsors a place in every ride briefing." in page
     assert sponsors.EMPTY_STATE in page.replace("&#39;", "'")
     add_campaign(world.a)

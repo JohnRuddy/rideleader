@@ -27,8 +27,8 @@ from . import club as clubmod
 from . import db
 from .models import ClubEmbed, ClubPremium, Sponsor, SponsorCampaign, SponsorDaily
 
-PRICE_CENTS = 1999
-PRICE_LABEL = "€19.99"
+PRICE_CENTS = 7999
+PRICE_LABEL = "€79.99"
 PRICE_LINE = f"{PRICE_LABEL} per club per year"
 VALUE_STATEMENT = ("Give your club sponsors a place in every ride briefing. Manage campaigns once, publish across your ride "
                    f"sheets and website, and share clear engagement reports. {PRICE_LINE}.")
