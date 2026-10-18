@@ -1,0 +1,24 @@
+/* The club-website sponsor strip: self-contained, no scripts, system fonts, light background. */
+* { box-sizing: border-box; }
+html, body { margin: 0; background: transparent; color: #101418; font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+body { padding: 6px; }
+.strip { display: flex; align-items: center; gap: 16px; padding: 14px 16px; border: 2px solid #101418; border-radius: 14px; background: #fbfaf7; max-width: 740px; }
+.logo { flex: none; width: auto; height: auto; max-width: 140px; max-height: 70px; object-fit: contain; }
+.txt { min-width: 0; }
+p { margin: 0; }
+.lab { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: #0b5d3b; }
+.name { font-size: 14px; color: #4f5760; font-weight: 600; margin-top: 2px; }
+.head { font-size: 19px; font-weight: 800; line-height: 1.2; margin-top: 2px; overflow-wrap: anywhere; }
+.body { font-size: 15px; color: #2b3138; margin-top: 4px; overflow-wrap: anywhere; }
+.until { font-size: 13px; color: #4f5760; margin-top: 6px; }
+.cta { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; padding: 0 18px; border: 2px solid #101418; border-radius: 10px; background: #ffd60a; color: #101418; font-weight: 800; text-decoration: none; }
+.cta:hover { background: #ffe14d; }
+.cta:focus-visible { outline: 3px solid #101418; outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 460px) {
+  .strip { align-items: flex-start; gap: 12px; padding: 10px 12px; }
+  .logo { max-width: 72px; max-height: 40px; }
+  .head { font-size: 17px; }
+  .body { font-size: 14px; }
+  .cta { min-height: 44px; margin-top: 6px; }
+}

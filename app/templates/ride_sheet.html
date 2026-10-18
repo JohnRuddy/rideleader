@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_sponsor_panel.html" import sponsor_panel %}
 {% block title %}{{ s.title }} · {{ s.date_long }}{% endblock %}
 {% block head %}
 <meta name="robots" content="noindex, nofollow">
@@ -183,6 +184,8 @@
   <p><a href="{{ url_for('main.show', route_id=route.id) }}">← Back to the plan</a></p>
 </section>
 {% endif %}
+
+{% if sponsor %}{{ sponsor_panel(sponsor, preview=not public) }}{% endif %}
 
 <footer class="sheet-foot small muted">
   <p>Page made {{ s.generated_at }} ({{ s.tz }}). {{ s.attribution | join(' · ') }}</p>

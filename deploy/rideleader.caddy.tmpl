@@ -6,8 +6,10 @@ __DOMAIN__ {
 		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
-		X-Frame-Options "SAMEORIGIN"
 		-Server
 	}
+	# Pages may not be framed by other sites, except the public sponsor widget, which clubs put on their own websites.
+	@notembed not path /embed/*
+	header @notembed X-Frame-Options "SAMEORIGIN"
 	reverse_proxy rideleader-web:8431
 }

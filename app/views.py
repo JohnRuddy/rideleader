@@ -21,6 +21,7 @@ from .plan import DEFAULT_GROUPS, clock_now, get_or_create_ride as _get_or_creat
 from .routemodel import parse_gpx, route_arrays
 from .route_factory import create_route
 from .security import can_change, visible_routes_filter
+from .sponsor_views import sponsor_options
 
 bp = Blueprint("main", __name__)
 
@@ -95,7 +96,9 @@ def show(route_id):
     can_edit = can_change(route, g.user)
     return render_template("route.html", route=route, tile_url=current_app.config["TILE_URL"],
                            categories=categories.public_json(), device=_current_device(),
-                           can_edit=can_edit, next_step=_next_step(route) if can_edit and g.user else None)
+                           can_edit=can_edit, next_step=_next_step(route) if can_edit and g.user else None,
+                           sponsor_options=sponsor_options(route) if can_edit and g.user else None,
+                           can_run_again=bool(g.user) and route.source != "strava")
 
 
 @bp.post("/routes/<int:route_id>/delete")

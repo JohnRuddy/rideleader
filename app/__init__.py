@@ -38,6 +38,10 @@ _ADDED_COLUMNS = [
     "ALTER TABLE club_stop ADD COLUMN IF NOT EXISTS club_id integer REFERENCES club(id) ON DELETE CASCADE",
     "ALTER TABLE closure ADD COLUMN IF NOT EXISTS club_id integer REFERENCES club(id) ON DELETE CASCADE",
     "ALTER TABLE login_token ADD COLUMN IF NOT EXISTS invite_id integer REFERENCES invite(id) ON DELETE SET NULL",
+    "ALTER TABLE route ADD COLUMN IF NOT EXISTS reused_from_id integer REFERENCES route(id) ON DELETE SET NULL",
+    "ALTER TABLE route ADD COLUMN IF NOT EXISTS series_root_id integer REFERENCES route(id) ON DELETE SET NULL",
+    "ALTER TABLE ride ADD COLUMN IF NOT EXISTS sponsor_mode varchar(10) NOT NULL DEFAULT 'auto'",
+    "ALTER TABLE ride ADD COLUMN IF NOT EXISTS sponsor_campaign_id integer REFERENCES sponsor_campaign(id) ON DELETE SET NULL",
 ]
 
 
@@ -110,9 +114,9 @@ def create_app(config: dict | None = None) -> Flask:
     from . import account, auth, club_views, conditions_views, security, share_views, strava_views
 
     security.init_app(app)
-    from . import clubadmin, guide
+    from . import clubadmin, guide, sponsor_views
 
-    for module in (auth, account, strava_views, conditions_views, club_views, share_views, clubadmin, guide):
+    for module in (auth, account, strava_views, conditions_views, club_views, share_views, clubadmin, guide, sponsor_views):
         app.register_blueprint(module.bp)
 
     import click

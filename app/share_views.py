@@ -13,6 +13,7 @@ from flask import Blueprint, Response, abort, current_app, g, jsonify, render_te
 
 from . import cue_card, db
 from . import ride_sheet as rs
+from . import sponsors
 from . import strava_service as svc
 from .models import Ride, Route
 from .plan import Plan, get_or_create_ride
@@ -123,8 +124,12 @@ def _page(route: Route, public: bool, token: str | None = None) -> Response:
     s = rs.build(route, Plan(route), public=public)
     url = _share_url(token) if token else None
     base = f"/r/{token}" if token else f"/routes/{route.id}"
+    # The sponsor panel is chosen after the sheet is built and only added to the page: it can't change any check, warning or stop.
+    panel = sponsors.panel_for_sheet(route, route.ride, preview=not public)
+    if public and route.club_id is not None and not sponsors.looks_automated(request):
+        sponsors.count_sheet_view(route.club_id, panel)
     return _safe(Response(render_template("ride_sheet.html", s=s, public=public, share_url=url, wa_text=rs.summary_text(s, url),
-                                          base=base, route=route)))
+                                          base=base, route=route, sponsor=panel)))
 
 
 @bp.get("/r/<token>")

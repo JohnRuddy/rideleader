@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Sponsor report · {{ club.name }} · {{ start.isoformat() }} to {{ end.isoformat() }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='sponsors.css') }}"><meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block content %}
+<section class="card report-sheet">
+  <p class="eyebrow">{{ club.name }} · Sponsor report</p>
+  <h1>Sponsor engagement report</h1>
+  <p>{{ start.strftime('%d %B %Y') }} to {{ end.strftime('%d %B %Y') }} ({{ tz }})</p>
+  <div class="metrics">
+    <div class="metric"><b>{{ rep.sheet_requests }}</b><span>Ride sheet requests</span></div>
+    <div class="metric"><b>{{ rep.widget_requests }}</b><span>Website widget requests</span></div>
+  </div>
+  {% if rep.lines %}
+  <div class="tablewrap"><table class="rtable">
+    <thead><tr><th>Campaign</th><th>Sponsor</th><th>Where</th><th class="num">Panel deliveries (requests)</th><th class="num">Recorded clicks</th></tr></thead>
+    <tbody>{% for l in rep.lines %}<tr><td>{{ l.campaign }}</td><td>{{ l.sponsor }}</td><td>{{ 'Ride sheet' if l.placement == 'ride_sheet' else 'Website' }}</td><td class="num">{{ l.deliveries }}</td><td class="num">{{ l.clicks }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<p>No sponsor panels were delivered in this period.</p>{% endif %}
+  <h2>About these numbers</h2>
+  <ul class="limits">{% for l in limits %}<li>{{ l }}</li>{% endfor %}</ul>
+  <p class="muted small">Prepared with Ride Leader Kit. This report is for the club to share by hand: it is never sent automatically. It does not measure purchases or sales.</p>
+  <p class="noprint"><button class="btn small" onclick="window.print()">Print or save as PDF</button> <a class="chip" href="{{ url_for('sponsors.reports', start=start.isoformat(), end=end.isoformat()) }}">Back to reports</a></p>
+</section>
+{% endblock %}

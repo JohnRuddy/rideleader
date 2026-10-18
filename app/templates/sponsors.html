@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Sponsors · {{ club.name }} · Ride Leader Kit{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='clubs.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='sponsors.css') }}">{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="eyebrow">{{ club.name }}</p>
+  <h1>Sponsors</h1>
+  <p class="lede">{{ value }}</p>
+  {% for cat, msg in notes %}<p class="{{ 'error' if cat == 'error' else 'note-ok' }}" role="{{ 'alert' if cat == 'error' else 'status' }}">{{ msg }}</p>{% endfor %}
+</section>
+
+<section class="card premium premium-{{ state.state }}" aria-labelledby="prem-h">
+  <h2 id="prem-h">Club Sponsor Publishing <span class="pill pill-{{ state.state }}">{{ {'none': 'Not active', 'active': 'Active', 'pending': 'Not started', 'expired': 'Expired', 'cancelled': 'Cancelled'}[state.state] }}</span></h2>
+  <p><strong>{{ price }}.</strong> {{ state_text }}</p>
+  {% if state.expires_at and state.state in ('active', 'expired') %}
+    <p class="muted">{{ 'Runs until' if state.state == 'active' else 'Ended on' }} {{ state.expires_at.astimezone().strftime('%d %B %Y') }}{% if state.state == 'active' and state.days_left is not none %} ({{ state.days_left }} day{{ '' if state.days_left == 1 else 's' }} left){% endif %}.</p>
+  {% endif %}
+  {% if not can_manage %}
+    <p class="note">You can still read your sponsors, campaigns and reports. Nothing is being shown on ride sheets or your website, and riders' shared links work as normal.
+      {% if not platform_admin %}To switch it on, ask the site admin to activate it for {{ club.name }}.{% endif %}</p>
+  {% endif %}
+  <p class="muted small">The club keeps all of its sponsorship income. {{ price }} is for the software, not a share of what a sponsor pays you. Online payment isn't connected yet, so the site admin switches it on after payment.</p>
+  {% if platform_admin %}
+  <form method="post" action="{{ url_for('sponsors.premium') }}" class="inline-form">
+    {{ csrf_input() }}
+    <label>Months <input type="number" name="months" value="12" min="1" max="36" inputmode="numeric"></label>
+    <label>Payment reference <span class="muted small">(optional)</span> <input type="text" name="reference" maxlength="120" placeholder="Invoice or transfer reference"></label>
+    <button class="btn small" name="action" value="activate">{{ 'Extend' if state.state == 'active' else 'Switch on' }}</button>
+    {% if state.state in ('active', 'pending') %}<button class="btn small ghost" name="action" value="cancel" onclick="return confirm('Stop showing sponsor panels for this club now?')">Cancel</button>{% endif %}
+    <p class="muted small">Site admin only. This records that the club has paid elsewhere; it takes no payment.</p>
+  </form>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Where and when</h2>
+  <form method="post" action="{{ url_for('sponsors.settings') }}" class="inline-form">
+    {{ csrf_input() }}
+    <label>Club timezone <input type="text" name="timezone" value="{{ tz }}" maxlength="60" placeholder="Europe/Dublin"></label>
+    <label class="check"><input type="checkbox" name="sponsor_rotation" {{ 'checked' if rotation }}> <span>Rotate between several sponsors</span></label>
+    <button class="btn small alt" type="submit">Save</button>
+  </form>
+  <p class="muted small">Campaign dates are read in {{ tz }}. A campaign's last day is included and it stops being shown when that day ends. With rotation on, a ride sheet keeps the same sponsor for a week and the website widget keeps one for a day, so it never changes while someone is reading. Without rotation, your default campaign is shown.</p>
+</section>
+
+<section class="card" aria-labelledby="camp-h">
+  <div class="head-row"><h2 id="camp-h">Campaigns</h2>
+    {% if can_manage %}<a class="btn small" href="{{ url_for('sponsors.campaign_new') }}">New campaign</a>{% endif %}</div>
+  {% if not camps %}
+    <div class="empty-state">
+      <p class="empty-title">{{ empty }}</p>
+      {% if can_manage %}<p><a class="btn" href="{{ url_for('sponsors.sponsor_new') }}">Add your first sponsor</a></p>{% endif %}
+    </div>
+  {% else %}
+  <ul class="club-list">
+    {% for r in camps %}
+    {% set c = r.c %}
+    <li class="club-row camp">
+      <div class="club-main">
+        <strong>{{ c.name }}</strong>
+        <span class="pill pill-{{ r.phase }}" title="{{ phase_text[r.phase] }}">{{ r.phase|capitalize }}</span>
+        {% if c.is_default %}<span class="badge">Default</span>{% endif %}
+        <span class="muted small">{{ r.sponsor.name if r.sponsor else '' }} · “{{ c.headline }}” · {{ c.starts_on.strftime('%d %b %Y') }} to {{ c.ends_on.strftime('%d %b %Y') }}</span>
+        <span class="muted small">{{ c.placements | map('replace', 'ride_sheet', 'Ride sheet') | map('replace', 'print', 'Print') | map('replace', 'widget', 'Website') | join(', ') }}{% if c.route_id %} · one ride{% else %} · whole club{% endif %}{% if c.value_cents is not none %} · value €{{ '%.2f' % (c.value_cents / 100) }} (only admins see this){% endif %}</span>
+      </div>
+      <div class="club-actions">
+        <a class="chip" href="{{ url_for('sponsors.campaign_preview', campaign_id=c.id) }}">Preview</a>
+        <a class="chip" href="{{ url_for('sponsors.campaign_edit', campaign_id=c.id) }}">Edit</a>
+        {% if c.status == 'draft' and can_manage %}<form method="post" action="{{ url_for('sponsors.campaign_publish', campaign_id=c.id) }}" class="inline">{{ csrf_input() }}<button class="chip">Publish</button></form>{% endif %}
+        {% if c.status == 'published' %}<form method="post" action="{{ url_for('sponsors.campaign_pause', campaign_id=c.id) }}" class="inline">{{ csrf_input() }}<button class="chip">Pause</button></form>{% endif %}
+        {% if c.status == 'paused' and can_manage %}<form method="post" action="{{ url_for('sponsors.campaign_resume', campaign_id=c.id) }}" class="inline">{{ csrf_input() }}<button class="chip">Resume</button></form>{% endif %}
+        {% if can_manage %}<form method="post" action="{{ url_for('sponsors.campaign_duplicate', campaign_id=c.id) }}" class="inline">{{ csrf_input() }}<button class="chip">Duplicate</button></form>{% endif %}
+        {% if c.status != 'archived' %}<form method="post" action="{{ url_for('sponsors.campaign_archive', campaign_id=c.id) }}" class="inline" onsubmit="return confirm('Archive this campaign? It stops showing and stays in your reports.')">{{ csrf_input() }}<button class="chip chip-danger">Archive</button></form>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+
+<section class="card" aria-labelledby="sp-h">
+  <div class="head-row"><h2 id="sp-h">Sponsors</h2>{% if can_manage %}<a class="btn small alt" href="{{ url_for('sponsors.sponsor_new') }}">Add a sponsor</a>{% endif %}</div>
+  {% if sponsor_rows %}
+  <ul class="club-list">
+    {% for s in sponsor_rows %}
+    <li class="club-row">
+      <div class="club-main">
+        {% if s.logo_token and not s.archived_at %}<img class="sp-thumb" src="{{ url_for('sponsors.logo', token=s.logo_token) }}" alt="">{% endif %}
+        <strong>{{ s.name }}</strong>{% if s.archived_at %}<span class="pill pill-archived">Archived</span>{% endif %}
+        {% if s.website %}<span class="muted small">{{ s.website }}</span>{% endif %}
+      </div>
+      <div class="club-actions">
+        <a class="chip" href="{{ url_for('sponsors.sponsor_edit', sponsor_id=s.id) }}">Edit</a>
+        {% if s.archived_at %}{% if can_manage %}<form method="post" action="{{ url_for('sponsors.sponsor_restore', sponsor_id=s.id) }}" class="inline">{{ csrf_input() }}<button class="chip">Restore</button></form>{% endif %}
+        {% else %}<form method="post" action="{{ url_for('sponsors.sponsor_archive', sponsor_id=s.id) }}" class="inline" onsubmit="return confirm('Archive this sponsor? Its campaigns stop showing and stay in your reports.')">{{ csrf_input() }}<button class="chip chip-danger">Archive</button></form>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="muted">No sponsors yet.</p>{% endif %}
+</section>
+
+<section class="card tiles">
+  <a class="tile" href="{{ url_for('sponsors.embed_setup') }}"><b>Website widget</b><span>Show your sponsor on your club website.{% if embed %} Switched on.{% endif %}</span></a>
+  <a class="tile" href="{{ url_for('sponsors.reports') }}"><b>Reports</b><span>Requests, panel deliveries and recorded clicks, with a CSV and a page to share.</span></a>
+</section>
+{% endblock %}

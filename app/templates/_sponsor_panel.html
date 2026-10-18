@@ -1,0 +1,22 @@
+{# One sponsor panel. Plain HTML only: no script, no pixel, no third-party address. The only link goes through our own click
+   address, which sends the rider to the destination the club saved. Hidden when printed (the compact line below is
+   printed instead, if the campaign allows it). `demo` shows the button without a live link, for the admin preview. #}
+{% macro sponsor_panel(p, preview=False, demo=False) -%}
+<aside class="sponsor-panel" aria-label="Club sponsor{% if preview %}, preview{% endif %}">
+  <p class="sp-label">{{ p.label }}{% if preview %} <span class="sp-preview">Preview: this is how riders see it</span>{% endif %}</p>
+  <div class="sp-main">
+    {% if p.logo_token %}<img class="sp-logo" src="{{ url_for('sponsors.logo', token=p.logo_token) }}" alt="" loading="lazy" decoding="async">{% endif %}
+    <div class="sp-text">
+      <p class="sp-name">{{ p.sponsor_name }}</p>
+      <p class="sp-headline">{{ p.headline }}</p>
+      {% if p.body %}<p class="sp-body">{{ p.body }}</p>{% endif %}
+      {% if p.cta_label %}
+      <p class="sp-action">{% if demo %}<span class="sp-cta sp-cta-demo">{{ p.cta_label }}</span>
+        {% else %}<a class="sp-cta" href="{{ url_for('sponsors.go', token=p.click_token, p=('preview' if preview else p.where)) }}" rel="sponsored noopener noreferrer" target="_blank">{{ p.cta_label }}<span class="sp-sr"> (opens {{ p.sponsor_name }}'s website in a new tab)</span></a>{% endif %}</p>
+      {% endif %}
+      {% if p.ends_on %}<p class="sp-until">Offer shown until {{ p.ends_on.strftime('%d %b %Y') }}</p>{% endif %}
+    </div>
+  </div>
+</aside>
+{% if p.print_line %}<p class="sponsor-print">Club sponsor: {{ p.sponsor_name }}. {{ p.headline }}</p>{% endif %}
+{%- endmacro %}

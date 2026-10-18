@@ -55,6 +55,17 @@
     msg.textContent = 'Working it out…';
     try { const t = await (await fetch(`${base.replace('/api', '')}/summary.txt`)).text(); clip(t, 'Copied: paste it into the group.'); } catch (e) { msg.textContent = e.message; }
   });
+  const sponsorSel = document.getElementById('sponsor-choice');
+  if (sponsorSel) sponsorSel.addEventListener('change', async () => {
+    const note = document.getElementById('sponsor-msg'), [mode, id] = sponsorSel.value.split(':');
+    try {
+      const r = await fetch(`${box.closest('#pane-share').querySelector('#sponsor-ride').dataset.base}/sponsor`, { method: 'PUT',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(mode === 'campaign' ? { mode, campaign_id: Number(id) } : { mode }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || r.statusText);
+      note.textContent = mode === 'none' ? 'This ride will be published without a sponsor panel.' : 'Saved.';
+    } catch (e) { note.textContent = e.message; }
+  });
   const vis = document.getElementById('club-visible');
   if (vis) vis.addEventListener('change', async () => {
     try {

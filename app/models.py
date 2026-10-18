@@ -33,6 +33,8 @@ class Route(db.Model):
     owner_id = db.Column(db.Integer, db.ForeignKey("app_user.id", ondelete="CASCADE"), index=True)  # null = unowned (legacy / signed-out upload)
     visibility = db.Column(db.String(10), nullable=False, default="club", server_default="club")    # private | club
     club_id = db.Column(db.Integer, db.ForeignKey("club.id", ondelete="SET NULL"), index=True)   # the club it is shared with (if visibility = club)
+    reused_from_id = db.Column(db.Integer, db.ForeignKey("route.id", ondelete="SET NULL"))       # the route this one is another run of
+    series_root_id = db.Column(db.Integer, db.ForeignKey("route.id", ondelete="SET NULL"))       # the first route in that chain (null = this is it)
     strava_route_id = db.Column(BigInteger)       # set only on routes imported from Strava (source = 'strava')
     strava_expires_at = db.Column(db.DateTime(timezone=True))  # Strava data is kept for at most 7 days
     state_seq = db.Column(db.Integer)             # undo cursor: seq of the current RouteState; null = no history yet
@@ -88,6 +90,8 @@ class Ride(db.Model):
     leader_phone = db.Column(db.String(30))
     notes = db.Column(db.Text)
     share_token = db.Column(db.String(40), unique=True)   # the link anyone can view the ride sheet with; null = not shared
+    sponsor_mode = db.Column(db.String(10), nullable=False, default="auto", server_default="auto")   # auto | none | campaign
+    sponsor_campaign_id = db.Column(db.Integer, db.ForeignKey("sponsor_campaign.id", ondelete="SET NULL"))
     groups = db.relationship("PaceGroup", backref="ride", cascade="all, delete-orphan", order_by="PaceGroup.position")
 
 
@@ -318,3 +322,92 @@ class ClubStop(db.Model):
     club_id = db.Column(db.Integer, db.ForeignKey("club.id", ondelete="CASCADE"), index=True)
     created_by = db.Column(db.Integer, db.ForeignKey("app_user.id", ondelete="SET NULL"))
     created_at = db.Column(db.DateTime(timezone=True), default=_now)
+
+
+# ---------------------------------------------------------------- club sponsor publishing (premium)
+
+class ClubPremium(db.Model):
+    """A club's premium entitlement. Attached to the club, never to a person. 'expired' is not stored: it is worked out
+    from expires_at, so a lapsed club can never look paid. Only a platform admin (or, later, a verified billing
+    webhook, see billing.py) writes this."""
+    __tablename__ = "club_premium"
+    id = db.Column(db.Integer, primary_key=True)
+    club_id = db.Column(db.Integer, db.ForeignKey("club.id", ondelete="CASCADE"), unique=True, nullable=False)
+    plan = db.Column(db.String(30), nullable=False, default="club_sponsor_annual")
+    status = db.Column(db.String(12), nullable=False, default="active")          # active | cancelled
+    price_cents = db.Column(db.Integer, nullable=False, default=1999)
+    currency = db.Column(db.String(3), nullable=False, default="EUR")
+    starts_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    source = db.Column(db.String(20), nullable=False, default="manual")         # manual | billing
+    external_ref = db.Column(db.String(120))                                     # invoice or billing reference
+    note = db.Column(db.String(300))
+    activated_by = db.Column(db.Integer, db.ForeignKey("app_user.id", ondelete="SET NULL"))
+    cancelled_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), default=_now)
+    updated_at = db.Column(db.DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class Sponsor(db.Model):
+    """A local business or supporter a club lists. Archived, never deleted, so history keeps its meaning."""
+    id = db.Column(db.Integer, primary_key=True)
+    club_id = db.Column(db.Integer, db.ForeignKey("club.id", ondelete="CASCADE"), index=True, nullable=False)
+    name = db.Column(db.String(80), nullable=False)
+    website = db.Column(db.String(300))
+    description = db.Column(db.String(200))
+    logo_blob = db.Column(LargeBinary)                         # re-encoded by us; never the uploaded bytes
+    logo_mime = db.Column(db.String(20))
+    logo_token = db.Column(db.String(32), unique=True)         # opaque public name of the logo; changes when the logo does
+    archived_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), default=_now)
+
+
+class SponsorCampaign(db.Model):
+    """What a sponsor says, where, and when. status is the club's decision; whether it is scheduled, live or expired
+    is worked out from the dates in the club's timezone (see sponsors.campaign_phase)."""
+    __tablename__ = "sponsor_campaign"
+    id = db.Column(db.Integer, primary_key=True)
+    club_id = db.Column(db.Integer, db.ForeignKey("club.id", ondelete="CASCADE"), index=True, nullable=False)
+    sponsor_id = db.Column(db.Integer, db.ForeignKey("sponsor.id"), nullable=False)
+    name = db.Column(db.String(80), nullable=False)             # internal
+    headline = db.Column(db.String(60), nullable=False)
+    body = db.Column(db.String(140))
+    cta_label = db.Column(db.String(24))
+    cta_url = db.Column(db.String(500))
+    starts_on = db.Column(db.Date, nullable=False)              # club-local dates, both ends inclusive
+    ends_on = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(10), nullable=False, default="draft")   # draft | published | paused | archived
+    placements = db.Column(JSONB, nullable=False, default=list)         # ride_sheet | print | widget
+    route_id = db.Column(db.Integer, db.ForeignKey("route.id", ondelete="SET NULL"))  # null = club-wide
+    display_order = db.Column(db.Integer, nullable=False, default=0)
+    is_default = db.Column(db.Boolean, nullable=False, default=False)
+    value_cents = db.Column(db.Integer)                         # what the sponsor pays the club; admins only, never public
+    click_token = db.Column(db.String(32), unique=True, nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey("app_user.id", ondelete="SET NULL"))
+    created_at = db.Column(db.DateTime(timezone=True), default=_now)
+    updated_at = db.Column(db.DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class SponsorDaily(db.Model):
+    """Counts per day, and nothing else: no row per visitor, no addresses, no cookies. campaign_id 0 is the club-level
+    counter (all requests, with or without a panel). Kinds: sheet_request, widget_request, delivery, click."""
+    __tablename__ = "sponsor_daily"
+    __table_args__ = (UniqueConstraint("day", "club_id", "campaign_id", "placement", "kind"),)
+    id = db.Column(db.Integer, primary_key=True)
+    day = db.Column(db.Date, nullable=False, index=True)        # in the club's timezone
+    club_id = db.Column(db.Integer, db.ForeignKey("club.id", ondelete="CASCADE"), index=True, nullable=False)
+    campaign_id = db.Column(db.Integer, nullable=False, default=0)
+    placement = db.Column(db.String(12), nullable=False)
+    kind = db.Column(db.String(16), nullable=False)
+    count = db.Column(db.Integer, nullable=False, default=0)
+
+
+class ClubEmbed(db.Model):
+    """The opaque name of a club's public sponsor widget. Revoking it stops the widget; a new one replaces it."""
+    __tablename__ = "club_embed"
+    id = db.Column(db.Integer, primary_key=True)
+    club_id = db.Column(db.Integer, db.ForeignKey("club.id", ondelete="CASCADE"), index=True, nullable=False)
+    token = db.Column(db.String(32), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), default=_now)
+    created_by = db.Column(db.Integer, db.ForeignKey("app_user.id", ondelete="SET NULL"))
+    revoked_at = db.Column(db.DateTime(timezone=True))
