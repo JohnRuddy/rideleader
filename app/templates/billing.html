@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Billing and invoices · {{ club.name }} · Ride Leader Kit{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='clubs.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='sponsors.css') }}">{% endblock %}
+{% macro money(cents, cur) %}{{ '€' if cur == 'EUR' else cur ~ ' ' }}{{ '%.2f'|format((cents or 0) / 100) }}{% endmacro %}
+{% block content %}
+<section class="card">
+  <p class="eyebrow"><a href="{{ url_for('sponsors.home') }}">Sponsors</a> /</p>
+  <h1>Billing and invoices</h1>
+  <p class="muted">Club Sponsor Publishing for {{ club.name }}: {{ price }}. Only this club's admins can see this page.</p>
+  {% for cat, msg in notes %}<p class="{{ 'error' if cat == 'error' else 'note-ok' }}" role="{{ 'alert' if cat == 'error' else 'status' }}">{{ msg }}</p>{% endfor %}
+</section>
+
+<section class="card premium premium-{{ state.state }}" aria-labelledby="sub-h">
+  <h2 id="sub-h">Your subscription <span class="pill pill-{{ state.state }}">{{ {'none': 'Not active', 'active': 'Active', 'pending': 'Not started', 'expired': 'Expired', 'cancelled': 'Cancelled'}[state.state] }}</span></h2>
+  {% if state.state == 'active' and state.expires_at %}
+    <p>{% if row and row.sub_status in ('active', 'trialing', 'past_due') and not row.cancel_at_period_end %}Renews automatically on <strong>{{ state.expires_at.astimezone().strftime('%d %B %Y') }}</strong>.
+       {% else %}Sponsor publishing runs until <strong>{{ state.expires_at.astimezone().strftime('%d %B %Y') }}</strong>{% if row and row.cancel_at_period_end %} and will not renew{% endif %}.{% endif %}</p>
+  {% elif state.state in ('expired', 'cancelled') %}
+    <p>Sponsor panels are not being shown. Your sponsors, campaigns and reports are kept, and shared ride links work as normal.</p>
+  {% else %}
+    <p>Not active yet.</p>
+  {% endif %}
+  {% if row and row.last_payment_failed_at and row.sub_status == 'past_due' %}
+    <p class="error" role="alert">The last payment didn't go through. Use <strong>Manage billing</strong> to update your card; Stripe will try again.
+      {% if state.serving %}Your sponsor panels keep showing until {{ state.expires_at.astimezone().strftime('%d %B %Y') }}.{% endif %}</p>
+  {% endif %}
+  {% if not stripe_on %}
+    <p class="note">Card payment isn't switched on yet. The site admin can activate Club Sponsor Publishing for your club after payment, and any invoice is sent to you directly.</p>
+  {% endif %}
+  <div class="row-gap">
+    {% if stripe_on and not subscribed %}
+    <form method="post" action="{{ url_for('billing.checkout') }}">{{ csrf_input() }}<button class="btn">{{ 'Renew' if state.state in ('active', 'expired') else 'Subscribe' }} by card: {{ price }}</button></form>
+    {% endif %}
+    {% if stripe_on and row and row.customer_id %}
+    <form method="post" action="{{ url_for('billing.portal') }}">{{ csrf_input() }}<button class="btn small alt">Manage billing</button></form>
+    <form method="post" action="{{ url_for('billing.refresh') }}">{{ csrf_input() }}<button class="btn small ghost">Refresh from Stripe</button></form>
+    {% endif %}
+  </div>
+  <p class="muted small">Card payments are handled by Stripe: we never see or store your card number. Manage billing opens Stripe's own page, where you can update the card, download invoices and cancel. If you cancel, sponsor panels keep showing until the end of the period you have paid for.{% if tax_on %} VAT is worked out by Stripe at checkout and shown on your invoice.{% endif %}</p>
+</section>
+
+<section class="card">
+  <h2>Invoices and receipts</h2>
+  {% if invoices %}
+  <div class="tablewrap"><table class="rtable stack-table">
+    <thead><tr><th>Date</th><th>Number</th><th>For</th><th class="num">Amount</th><th>Status</th><th>Download</th></tr></thead>
+    <tbody>
+    {% for i in invoices %}
+      <tr>
+        <td data-label="Date">{{ (i.issued_at or i.created_at).astimezone().strftime('%d %b %Y') }}</td>
+        <td data-label="Number">{{ i.number or 'Draft' }}</td>
+        <td data-label="For">{{ i.description }}{% if i.period_start and i.period_end %}<br><span class="muted small">{{ i.period_start.astimezone().strftime('%d %b %Y') }} to {{ i.period_end.astimezone().strftime('%d %b %Y') }}</span>{% endif %}</td>
+        <td class="num" data-label="Amount">{{ money(i.amount_paid if i.status == 'paid' else i.amount_due, i.currency) }}{% if i.tax %}<br><span class="muted small">incl. {{ money(i.tax, i.currency) }} tax</span>{% endif %}{% if i.amount_refunded %}<br><span class="muted small">{{ money(i.amount_refunded, i.currency) }} refunded</span>{% endif %}</td>
+        <td data-label="Status"><span class="pill pill-{{ 'active' if i.status == 'paid' else ('expired' if i.status in ('void', 'uncollectible') else 'scheduled') }}">{{ {'paid': 'Paid', 'open': 'Due', 'void': 'Void', 'uncollectible': 'Unpaid', 'draft': 'Draft'}.get(i.status, i.status) }}</span></td>
+        <td class="dl" data-label="Download">
+          {% if i.pdf_url %}<a href="{{ i.pdf_url }}" rel="noopener noreferrer" target="_blank">Invoice (PDF)</a><br>{% endif %}
+          {% if i.receipt_url %}<a href="{{ i.receipt_url }}" rel="noopener noreferrer" target="_blank">Receipt</a><br>{% endif %}
+          {% if i.hosted_url %}<a href="{{ i.hosted_url }}" rel="noopener noreferrer" target="_blank">View online</a>{% endif %}
+          {% if not (i.pdf_url or i.receipt_url or i.hosted_url) %}<span class="muted small">Not available yet</span>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <p class="muted small">Invoices and receipts open on Stripe's own pages, in a new tab. Stripe can also email a receipt for each card payment.</p>
+  {% else %}
+  <p class="muted">No invoices yet. After a card payment, its invoice and receipt appear here to download. If your club was activated by the site admin after a bank transfer or another payment, that invoice comes from the site admin directly.</p>
+  {% endif %}
+</section>
+
+{% if platform_admin %}
+<section class="card">
+  <h2>Site admin: Stripe set-up</h2>
+  <ul class="limits">
+    <li>Card payment is <strong>{{ 'on' if stripe_on else 'off' }}</strong> (needs <code>STRIPE_SECRET_KEY</code>). Webhook secret is <strong>{{ 'set' if webhook_ready else 'not set' }}</strong> (<code>STRIPE_WEBHOOK_SECRET</code>). Use Stripe test keys until you have checked a full payment.</li>
+    <li>Webhook address in Stripe (Developers, Webhooks): <code>{{ webhook_url }}</code></li>
+    <li>Events to send: <code>{{ webhook_events|join(', ') }}</code></li>
+    <li>In Stripe, also switch on: the customer portal (Settings, Billing, Customer portal) and customer emails for successful payments (Settings, Emails).</li>
+    <li>Premium follows what Stripe has been paid for. Consider <code>PREMIUM_GRACE_DAYS=7</code> so a late card retry doesn't switch panels off.</li>
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

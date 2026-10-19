@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit sponsor' if sp else 'Add a sponsor' }} · Ride Leader Kit{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='sponsors.css') }}">{% endblock %}
+{% block content %}
+{% set v = form if form else {} %}
+<section class="card narrow-form">
+  <p class="eyebrow"><a href="{{ url_for('sponsors.home') }}">Sponsors</a> /</p>
+  <h1>{{ 'Edit sponsor' if sp else 'Add a sponsor' }}</h1>
+  <p class="muted">Add the business once. You can run as many campaigns for it as you like.</p>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" enctype="multipart/form-data" class="stack">
+    {{ csrf_input() }}
+    <label>Name <input type="text" name="name" maxlength="80" required value="{{ v.get('name') or (sp.name if sp else '') }}"></label>
+    <label>Logo {% if sp %}<span class="muted small">(leave empty to keep the current one)</span>{% endif %}
+      <input type="file" name="logo" accept="image/png,image/jpeg,image/webp" {% if not sp %}required{% endif %}></label>
+    <p class="muted small">PNG, JPEG or WebP, up to 1.5 MB. A logo on a white or clear background works best. It is shown at a small size, never stretched or cropped.</p>
+    {% if sp and sp.logo_token %}<p><img class="sp-thumb big" src="{{ url_for('sponsors.logo', token=sp.logo_token) }}" alt="Current logo for {{ sp.name }}"></p>{% endif %}
+    <label>Website <span class="muted small">(optional, starts with https://)</span> <input type="url" name="website" maxlength="300" placeholder="https://www.example.ie" value="{{ v.get('website') or (sp.website if sp and sp.website else '') }}"></label>
+    <label>Short description <span class="muted small">(optional, only you see this)</span> <input type="text" name="description" maxlength="200" value="{{ v.get('description') or (sp.description if sp and sp.description else '') }}"></label>
+    <button class="btn" type="submit">{{ 'Save sponsor' if sp else 'Add sponsor' }}</button>
+  </form>
+</section>
+{% endblock %}

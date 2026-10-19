@@ -14,6 +14,8 @@ DEFAULT_SETTINGS = {
     "heavy_rain_mm_h": 4.0,
     "lights_min_before_sunset": 30,
     "long_stretch_km": 25.0,
+    "timezone": "Europe/Dublin",   # the club's clock: sponsor campaign dates are read in it
+    "sponsor_rotation": False,     # rotate between several eligible sponsor campaigns (fixed per ride for a week)
 }
 
 
@@ -40,6 +42,15 @@ def validate(body: dict) -> dict:
         except ValueError:
             raise ValueError("Default start must look like 09:00.")
         out["default_start"] = t.strftime("%H:%M")
+    if "timezone" in body:
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+        try:
+            ZoneInfo(str(body["timezone"]))
+        except (ZoneInfoNotFoundError, ValueError):
+            raise ValueError("That isn't a timezone name. Try Europe/Dublin.")
+        out["timezone"] = str(body["timezone"])
+    if "sponsor_rotation" in body:
+        out["sponsor_rotation"] = bool(body["sponsor_rotation"])
     for key, lo, hi in (("warning_buffer_h", 0, 12), ("gust_kmh", 20, 150), ("ice_c", -10, 10),
                         ("heavy_rain_mm_h", 0.5, 30), ("lights_min_before_sunset", 0, 180), ("long_stretch_km", 5, 200)):
         if key in body:

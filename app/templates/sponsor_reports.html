@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Sponsor reports · {{ club.name }} · Ride Leader Kit{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='clubs.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='sponsors.css') }}">{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="eyebrow"><a href="{{ url_for('sponsors.home') }}">Sponsors</a> /</p>
+  <h1>Sponsor reports</h1>
+  <p class="muted">What happened with your sponsor panels, in plain counts. Dates are in {{ tz }}.</p>
+  <form method="get" class="inline-form">
+    <label>From <input type="date" name="start" value="{{ start.isoformat() }}"></label>
+    <label>To <input type="date" name="end" value="{{ end.isoformat() }}"></label>
+    <button class="btn small alt">Show</button>
+    <a class="chip" href="{{ url_for('sponsors.reports_csv', start=start.isoformat(), end=end.isoformat()) }}">Download CSV</a>
+    <a class="chip" href="{{ url_for('sponsors.report_print', start=start.isoformat(), end=end.isoformat()) }}">Page to share</a>
+  </form>
+  {% if not state.serving %}<p class="note">Club Sponsor Publishing is not active, so no panels are being shown or counted. Earlier results are kept here.</p>{% endif %}
+</section>
+
+<section class="card">
+  <h2>Across the club</h2>
+  <div class="metrics">
+    <div class="metric"><b>{{ rep.sheet_requests }}</b><span>Ride sheet requests</span></div>
+    <div class="metric"><b>{{ rep.widget_requests }}</b><span>Website widget requests</span></div>
+  </div>
+  <p class="muted small">Every time a shared ride sheet or your website widget was fetched in this period, with or without a sponsor panel.</p>
+</section>
+
+<section class="card">
+  <h2>By campaign</h2>
+  {% if rep.lines %}
+  <div class="tablewrap"><table class="rtable">
+    <thead><tr><th>Campaign</th><th>Sponsor</th><th>Where</th><th class="num">Panel deliveries <span class="muted small">(requests)</span></th><th class="num">Recorded clicks</th></tr></thead>
+    <tbody>
+      {% for l in rep.lines %}<tr><td>{{ l.campaign }}</td><td>{{ l.sponsor }}</td><td>{{ 'Ride sheet' if l.placement == 'ride_sheet' else 'Website' }}</td><td class="num">{{ l.deliveries }}</td><td class="num">{{ l.clicks }}</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}<p class="muted">Nothing to report in this period yet. Once a campaign is live and a ride sheet is opened, counts appear here.</p>{% endif %}
+</section>
+
+<section class="card">
+  <h2>How to read these numbers</h2>
+  <ul class="limits">{% for l in limits %}<li>{{ l }}</li>{% endfor %}</ul>
+  <p class="muted small">No purchases, sales or revenue are measured or claimed. Counts are daily totals only: nothing identifies a rider.</p>
+</section>
+{% endblock %}

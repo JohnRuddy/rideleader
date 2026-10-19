@@ -38,6 +38,10 @@ _ADDED_COLUMNS = [
     "ALTER TABLE club_stop ADD COLUMN IF NOT EXISTS club_id integer REFERENCES club(id) ON DELETE CASCADE",
     "ALTER TABLE closure ADD COLUMN IF NOT EXISTS club_id integer REFERENCES club(id) ON DELETE CASCADE",
     "ALTER TABLE login_token ADD COLUMN IF NOT EXISTS invite_id integer REFERENCES invite(id) ON DELETE SET NULL",
+    "ALTER TABLE route ADD COLUMN IF NOT EXISTS reused_from_id integer REFERENCES route(id) ON DELETE SET NULL",
+    "ALTER TABLE route ADD COLUMN IF NOT EXISTS series_root_id integer REFERENCES route(id) ON DELETE SET NULL",
+    "ALTER TABLE ride ADD COLUMN IF NOT EXISTS sponsor_mode varchar(10) NOT NULL DEFAULT 'auto'",
+    "ALTER TABLE ride ADD COLUMN IF NOT EXISTS sponsor_campaign_id integer REFERENCES sponsor_campaign(id) ON DELETE SET NULL",
 ]
 
 
@@ -75,6 +79,11 @@ def create_app(config: dict | None = None) -> Flask:
         STRAVA_CLIENT_ID=os.environ.get("STRAVA_CLIENT_ID", ""), STRAVA_CLIENT_SECRET=os.environ.get("STRAVA_CLIENT_SECRET", ""),
         STRAVA_VERIFY_TOKEN=os.environ.get("STRAVA_VERIFY_TOKEN", ""),
         STRAVA_SUBSCRIPTION_ID=os.environ.get("STRAVA_SUBSCRIPTION_ID", ""),
+        STRIPE_SECRET_KEY=os.environ.get("STRIPE_SECRET_KEY", ""), STRIPE_WEBHOOK_SECRET=os.environ.get("STRIPE_WEBHOOK_SECRET", ""),
+        STRIPE_PRICE_ID=os.environ.get("STRIPE_PRICE_ID", ""),                      # optional: a Price made in the Stripe dashboard
+        STRIPE_AUTOMATIC_TAX=os.environ.get("STRIPE_AUTOMATIC_TAX", "0") == "1",     # let Stripe Tax work out VAT
+        STRIPE_TAX_BEHAVIOR=os.environ.get("STRIPE_TAX_BEHAVIOR", "inclusive"),      # inclusive | exclusive
+        PREMIUM_GRACE_DAYS=int(os.environ.get("PREMIUM_GRACE_DAYS", "0")),
     )
     if config:
         app.config.update(config)
@@ -110,9 +119,9 @@ def create_app(config: dict | None = None) -> Flask:
     from . import account, auth, club_views, conditions_views, security, share_views, strava_views
 
     security.init_app(app)
-    from . import clubadmin, guide
+    from . import billing_views, clubadmin, guide, sponsor_views
 
-    for module in (auth, account, strava_views, conditions_views, club_views, share_views, clubadmin, guide):
+    for module in (auth, account, strava_views, conditions_views, club_views, share_views, clubadmin, guide, sponsor_views, billing_views):
         app.register_blueprint(module.bp)
 
     import click

@@ -6,6 +6,7 @@
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 {% endblock %}
 {% block content %}
+{% with msgs = get_flashed_messages(with_categories=True) %}{% for cat, msg in msgs %}<p class="{{ 'error' if cat == 'error' else 'note-ok' }}" role="status">{{ msg }}</p>{% endfor %}{% endwith %}
 <header class="stagehead">
   <div class="sh-title">
     <p class="eyebrow">{% if route.source == 'strava' %}From Strava{% elif route.visibility == 'club' %}Club route{% else %}Your route{% endif %}</p>
@@ -213,6 +214,30 @@
         <p class="muted small" id="cyql-msg" role="status" aria-live="polite"></p>
         <p class="muted small">Cyql asks for ride type, start time and place, a route (GPX), and an estimated distance and speed. Cues in the GPX are plain points and Cyql may not show them: the ride-sheet link in the description carries them.</p>
       </section>
+      {% if sponsor_options is not none and can_edit %}
+      <section class="block" id="sponsor-ride" data-base="/api/routes/{{ route.id }}">
+        <h2>Sponsor on this ride</h2>
+        <p class="muted small">Your club's sponsor appears in its own labelled panel near the end of the ride sheet. It never changes the checks, warnings or stops.</p>
+        <label>Sponsor panel
+          <select id="sponsor-choice">
+            <option value="auto" {{ 'selected' if not route.ride or route.ride.sponsor_mode == 'auto' }}>Use my club's sponsor (automatic)</option>
+            <option value="none" {{ 'selected' if route.ride and route.ride.sponsor_mode == 'none' }}>No sponsor panel on this ride</option>
+            {% for o in sponsor_options %}<option value="campaign:{{ o.id }}" {{ 'selected' if route.ride and route.ride.sponsor_mode == 'campaign' and route.ride.sponsor_campaign_id == o.id }}>{{ o.label }}</option>{% endfor %}
+          </select></label>
+        <p class="muted small" id="sponsor-msg" role="status" aria-live="polite"></p>
+      </section>
+      {% endif %}
+      {% if can_run_again and current_user %}
+      <section class="block" id="run-again">
+        <h2>Run this ride again</h2>
+        <p class="muted small">Make a new, dated copy for another day. The earlier ride, its link and its notes stay exactly as they are, and the weather, daylight and closure checks are worked out fresh for the new date.</p>
+        <form method="post" action="{{ url_for('sponsors.run_again', src_id=route.id) }}" class="stack">
+          {{ csrf_input() }}
+          <label>New date <span class="muted small">(leave empty for the same day next week)</span> <input type="date" name="date"></label>
+          <button class="btn small alt" type="submit">Run this ride again</button>
+        </form>
+      </section>
+      {% endif %}
       <form method="post" action="{{ url_for('main.delete', route_id=route.id) }}" onsubmit="return confirm('Delete this route?')" class="danger-zone">
         {{ csrf_input() }}
         <button class="btn ghost" type="submit">Delete route</button>

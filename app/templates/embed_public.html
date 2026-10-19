@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Club sponsor</title>
+  <base target="_blank">
+  <link rel="stylesheet" href="{{ url_for('static', filename='embed.css') }}">
+</head>
+<body>
+{% if panel %}
+<aside class="strip" aria-label="Club sponsor">
+  {% if panel.logo_token %}<img class="logo" src="{{ url_for('sponsors.logo', token=panel.logo_token) }}" alt="" width="160" height="80">{% endif %}
+  <div class="txt">
+    <p class="lab">Club sponsor</p>
+    <p class="name">{{ panel.sponsor_name }}</p>
+    <p class="head">{{ panel.headline }}</p>
+    {% if panel.body %}<p class="body">{{ panel.body }}</p>{% endif %}
+    {% if panel.cta_label %}<p><a class="cta" href="{{ url_for('sponsors.go', token=panel.click_token, p='widget') }}" rel="sponsored noopener noreferrer">{{ panel.cta_label }}<span class="sr"> (opens {{ panel.sponsor_name }}'s website in a new tab)</span></a></p>{% endif %}
+    {% if panel.ends_on %}<p class="until">Offer shown until {{ panel.ends_on.strftime('%d %b %Y') }}</p>{% endif %}
+  </div>
+</aside>
+{% endif %}
+</body>
+</html>

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_sponsor_panel.html" import sponsor_panel %}
+{% block title %}Preview · {{ camp.name }} · Ride Leader Kit{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='clubs.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='sponsors.css') }}">{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="eyebrow"><a href="{{ url_for('sponsors.home') }}">Sponsors</a> /</p>
+  <h1>{{ camp.name }}</h1>
+  {% for cat, msg in notes %}<p class="{{ 'error' if cat == 'error' else 'note-ok' }}" role="status">{{ msg }}</p>{% endfor %}
+  <p><span class="pill pill-{{ phase }}">{{ phase|capitalize }}</span> {{ phase_text[phase] }}</p>
+  <p class="muted">Runs {{ camp.starts_on.strftime('%d %B %Y') }} to {{ camp.ends_on.strftime('%d %B %Y') }} ({{ tz }}, last day included).
+    {% if not state.serving %}<strong>Club Sponsor Publishing is not active, so nothing is being shown.</strong>{% endif %}</p>
+  <div class="row-gap">
+    <a class="btn small alt" href="{{ url_for('sponsors.campaign_edit', campaign_id=camp.id) }}">Edit</a>
+    {% if camp.status == 'draft' and state.serving %}<form method="post" action="{{ url_for('sponsors.campaign_publish', campaign_id=camp.id) }}" class="inline">{{ csrf_input() }}<button class="btn small">Publish</button></form>{% endif %}
+  </div>
+</section>
+
+<section class="card previews">
+  <h2>How riders see it</h2>
+  <div class="preview-set">
+    <figure><figcaption>On a phone</figcaption><div class="frame phone">{{ sponsor_panel(panel, preview=True, demo=True) }}</div></figure>
+    <figure><figcaption>On a wide screen</figcaption><div class="frame wide">{{ sponsor_panel(panel, preview=True, demo=True) }}</div></figure>
+    <figure><figcaption>Printed</figcaption>
+      <div class="frame paper">{% if panel.print_line %}<p class="sponsor-print-demo">Club sponsor: {{ panel.sponsor_name }}. {{ panel.headline }}</p>{% else %}<p class="muted small">Nothing is printed for this campaign. Tick "Printed sheet" to add a short acknowledgement line.</p>{% endif %}</div></figure>
+  </div>
+  <p class="muted small">On the ride sheet this appears after the safety information and before the page footer, labelled "Club sponsor". On paper only the short acknowledgement line is printed, never the button.{% if preview_url %} The button goes to {{ preview_url }}.{% endif %}</p>
+</section>
+{% endblock %}

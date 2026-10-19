@@ -51,6 +51,7 @@
           <a href="{{ url_for('main.index') }}" {% if ep in ('main.index', 'main.show') %}aria-current="page"{% endif %}>My routes</a>
           <a href="{{ url_for('club.page') }}" {% if ep == 'club.page' %}aria-current="page"{% endif %}>Club stops</a>
           <a href="{{ url_for('clubadmin.index') }}" class="club-link" title="Your clubs and members" {% if ep.startswith('clubadmin') %}aria-current="page"{% endif %}>{{ current_club.name if current_club else 'Clubs' }}</a>
+          {% if is_club_admin and current_club %}<a href="{{ url_for('sponsors.home') }}" {% if ep.startswith('sponsors.') %}aria-current="page"{% endif %}>Sponsors</a>{% endif %}
           <a href="{{ url_for('guide.page') }}" {% if ep == 'guide.page' %}aria-current="page"{% endif %}>How it works</a>
           <button type="button" class="linkbtn" data-open-help>Help</button>
           <a href="{{ url_for('account.account') }}" class="who" title="Your account">{{ current_user.email }}</a>
