@@ -31,6 +31,7 @@ services:
       DATABASE_URL: postgresql+psycopg://rlk:rlk_dev_only@db:5432/rlk
       REDIS_URL: redis://redis:6379/0
       TILE_URL: ${TILE_URL:-https://tile.openstreetmap.org/{z}/{x}/{y}.png}
+      BASEMAP_ENABLED: ${BASEMAP_ENABLED:-1}
       OVERPASS_URL: ${OVERPASS_URL:-https://overpass-api.de/api/interpreter}
       OVERPASS_MIN_INTERVAL: ${OVERPASS_MIN_INTERVAL:-1.0}
       OVERPASS_WORKERS: ${OVERPASS_WORKERS:-1}

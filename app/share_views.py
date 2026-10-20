@@ -11,7 +11,7 @@ from datetime import datetime
 
 from flask import Blueprint, Response, abort, current_app, g, jsonify, render_template, request, url_for
 
-from . import cue_card, db
+from . import basemap, cue_card, db, ratelimit
 from . import ride_sheet as rs
 from . import sponsors
 from . import strava_service as svc
@@ -121,9 +121,9 @@ def share_status(route_id):
 # ---------------- the public page (no sign-in) ----------------
 
 def _page(route: Route, public: bool, token: str | None = None) -> Response:
-    s = rs.build(route, Plan(route), public=public)
+    base = f"/r/{token}" if (token and public) else f"/routes/{route.id}"
+    s = rs.build(route, Plan(route), public=public, map_url=f"{base}/map.webp")
     url = _share_url(token) if token else None
-    base = f"/r/{token}" if token else f"/routes/{route.id}"
     # The sponsor panel is chosen after the sheet is built and only added to the page: it can't change any check, warning or stop.
     panel = sponsors.panel_for_sheet(route, route.ride, preview=not public)
     if public and route.club_id is not None and not sponsors.looks_automated(request):
@@ -135,6 +135,36 @@ def _page(route: Route, public: bool, token: str | None = None) -> Response:
 @bp.get("/r/<token>")
 def public_sheet(token):
     return _page(_public_ride(token).route, True, token)
+
+
+def _map_picture(route: Route) -> Response:
+    """The picture behind the route on the sheet: OpenStreetMap tiles, fetched and stitched here so the rider's browser only
+    talks to us. 503 (and the outline stays) if the tiles can't be had right now."""
+    cfg = current_app.config
+    client = basemap.get_client(cfg)
+    if client is None:
+        abort(404)
+    frame = basemap.frame_for_plan(Plan(route))
+    cache = basemap.get_cache(current_app)
+    tile_url = cfg.get("TILE_URL", "")
+    fk = basemap.frame_key(frame, tile_url)
+    cached = cache.get("basemap:" + fk) or cache.get("basemap-partial:" + fk)
+    if cached is None and not ratelimit.allow("basemap", request.remote_addr or "?", 20, 60):
+        return Response("Too many map requests. Try again in a minute.", status=429, headers={"Retry-After": "60"})
+    data, complete = basemap.render(frame, client, cache, tile_url)
+    if not data:
+        return Response("The map isn't available right now.", status=503, headers={"Retry-After": "30", "Cache-Control": "no-store"})
+    resp = Response(data, mimetype="image/webp")
+    resp.headers["Cache-Control"] = "public, max-age=86400" if complete else "public, max-age=60"
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Robots-Tag"] = "noindex, nofollow"
+    resp.headers["Referrer-Policy"] = "no-referrer"
+    return resp
+
+
+@bp.get("/r/<token>/map.webp")
+def public_map(token):
+    return _map_picture(_public_ride(token).route)
 
 
 @bp.get("/r/<token>/summary.txt")
@@ -200,6 +230,11 @@ def service_worker():
 def sheet(route_id):
     route = db.session.get(Route, route_id) or abort(404)
     return _page(route, False, get_or_create_ride(route).share_token)
+
+
+@bp.get("/routes/<int:route_id>/map.webp")
+def map_picture(route_id):
+    return _map_picture(db.session.get(Route, route_id) or abort(404))
 
 
 @bp.get("/routes/<int:route_id>/summary.txt")

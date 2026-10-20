@@ -26,6 +26,7 @@ x-app-env: &appenv
   SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
   TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:?Set TOKEN_ENCRYPTION_KEY in .env}
   TILE_URL: ${TILE_URL:-https://tile.openstreetmap.org/{z}/{x}/{y}.png}
+  BASEMAP_ENABLED: ${BASEMAP_ENABLED:-1}
   OVERPASS_URL: ${OVERPASS_URL:-https://overpass-api.de/api/interpreter}
   OVERPASS_MIN_INTERVAL: ${OVERPASS_MIN_INTERVAL:-1.0}
   OVERPASS_WORKERS: ${OVERPASS_WORKERS:-1}

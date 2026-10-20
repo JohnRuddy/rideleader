@@ -351,7 +351,8 @@ def test_re_reading_a_refunded_invoice_does_not_switch_premium_back_on_but_a_new
     c = login(bw, bw.admin_a)
     c.post("/sponsors/billing/refresh")
     assert sponsors.premium_state(bw.a.id)["state"] == "cancelled"
-    fresh = invoice("in_new", start=NOWTS + 60, number="RLK-9", created=NOWTS + 60)
+    later = int(time.time()) + 60                                                # NOWTS was fixed at import, long before a full run gets here
+    fresh = invoice("in_new", start=later, number="RLK-9", created=later)
     send(bw.client, event("e3", "invoice.paid", fresh))
     assert sponsors.premium_state(bw.a.id)["state"] == "active"
 
