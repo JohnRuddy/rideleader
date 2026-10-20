@@ -16,7 +16,7 @@ garmin-fit-sdk==21.218.0
 tzdata==2024.1
 cryptography==43.0.1
 reportlab==4.2.2
-pypdf==4.3.1
+pypdf==6.21.1
 stripe==15.6.1
 Pillow>=11,<14
 segno==1.6.1
