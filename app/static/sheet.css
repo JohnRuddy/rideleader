@@ -31,3 +31,9 @@
 .bike-send li a { display: inline-block; padding: 10px 0; font-weight: 700; }
 .bike-send summary::before { content: "\25B8\a0\a0"; }
 .bike-send[open] > summary::before { content: "\25BE\a0\a0"; }
+.windkey { margin: 4px 0 8px; }
+.wk-items { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; margin: 6px 0; padding: 0; font-weight: 700; font-size: .95rem; }
+.sw { display: inline-block; width: 28px; height: 8px; border-radius: 4px; margin-right: 7px; vertical-align: middle; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.sw.head { background: #d7301f; } .sw.cross { background: #f0a30a; } .sw.tail { background: #2c7bb6; }
+.wk-stretches { margin: 4px 0 0; padding-left: 1.1rem; font-size: .92rem; }
+.wk-stretches li { margin: 2px 0; }

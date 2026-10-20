@@ -91,6 +91,14 @@
 <section class="card sheet">
   <h2>The route</h2>
   {{ s.map_svg }}
+  {% if s.wind_view %}{% set wv = s.wind_view %}
+  <div class="windkey">
+    <p class="small"><strong>Wind for group {{ wv.group }}'s times</strong>{% if wv.detail and wv.detail != 'Detailed' %} <span class="muted">({{ wv.detail | lower }} forecast, so a guide only)</span>{% endif %}.
+      Arrows point the way the wind is blowing{% if wv.wet %}; blue drops mark where rain is likely{% endif %}.</p>
+    <ul class="wk-items" aria-label="Wind colours">{% for p in wv.present %}<li><span class="sw {{ p.class }}" aria-hidden="true"></span>{{ p.label }}</li>{% endfor %}</ul>
+    <ul class="wk-stretches">{% for st in wv.stretches %}<li><strong>{{ st.label }}</strong> km {{ st.km }}{% if st.kmh is not none %}, about {{ st.kmh }} km/h{% endif %}{% if st.from %} from the {{ st.from }}{% endif %}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
   {% if s.profile_svg %}{{ s.profile_svg }}{% endif %}
   <p class="small muted legend"><span class="lg" style="background:#34c759">S</span> start · <span class="lg" style="background:#1d1d1f">F</span> finish · <span class="lg sq" style="background:#0a84ff">R</span> regroup · ▲ hazard · <span style="color:#d70015">- - -</span> closure · pale red bands on the profile are climbs</p>
 </section>

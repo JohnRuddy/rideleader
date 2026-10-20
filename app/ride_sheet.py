@@ -8,7 +8,7 @@ Rules it follows:
 - Defibrillator locations are community data and always carry that caveat.
 """
 import math
-from datetime import datetime, timezone
+from datetime import datetime
 from html import escape
 from zoneinfo import ZoneInfo
 
@@ -17,12 +17,18 @@ from flask import current_app
 from markupsafe import Markup
 from shapely.geometry import LineString
 
+from . import along_route as ar
 from . import basemap, categories, closures as cl, hours as hrs
 from . import warnings_feed as wf
 from .models import Waypoint
 from .plan import Plan, clock_now
 
 SECTION_M = 10_000.0
+# Wind on the map: blue helps, amber is across, red is against (a set that stays apart for red-green colour blindness).
+WIND_COLORS = {"tail": "#2c7bb6", "cross": "#f0a30a", "head": "#d7301f"}
+WIND_WORDS = {"tail": "Tailwind", "cross": "Crosswind", "head": "Headwind"}
+WIND_ORDER = ["head", "cross", "tail"]
+RAIN_COLOR = "#3b8fd9"
 AED_NOTE = "Defibrillator locations come from community data (OpenStreetMap and the club) and may be incomplete or out of date."
 EMERGENCY = "In an emergency call 112 or 999."
 CHECKLIST = ["Spare tube", "Pump", "First-aid kit", "Lights (front and rear)", "Ride roster / who is here", "Phone charged"]
@@ -121,11 +127,12 @@ def build(route, plan: Plan | None = None, public: bool = False, map_url: str | 
         "attribution": ["Map and stop data © OpenStreetMap contributors (ODbL)", wf.ATTRIBUTION]
                        + weather_res.get("attribution", []) + ["County boundaries: Tailte Éireann (CC BY 4.0)"],
     }
+    sheet["wind_view"] = wind = _wind_view(plan, weather_res)
     frame, image_url = None, None
     if map_url and basemap.get_client(current_app.config) is not None:
         frame = basemap.frame_for_plan(plan)
         image_url = f"{map_url}?v={basemap.frame_key(frame, current_app.config.get('TILE_URL', ''))}"
-    sheet["map_svg"] = map_svg(plan, stops, hazards, closure["hits"], banner["warnings"], frame=frame, image_url=image_url)
+    sheet["map_svg"] = map_svg(plan, stops, hazards, closure["hits"], banner["warnings"], frame=frame, image_url=image_url, wind=wind)
     sheet["profile_svg"] = profile_svg(plan, sheet["climbs"], stops)
     return sheet
 
@@ -142,8 +149,67 @@ def _slice(plan: Plan, s0: float, s1: float, step: float = 200.0):
     return [plan.line.point(float(s)) for s in ss]
 
 
+def _wind_view(plan: Plan, weather_res: dict) -> dict | None:
+    """The wind along the route for the first pace group's times, ready to draw and to read: stretches (head, cross or tail
+    with a speed and a direction), a few arrow positions, and where rain is likely. None when there is no forecast to use."""
+    if not weather_res.get("available") or not weather_res.get("groups"):
+        return None
+    grp = weather_res["groups"][0]
+    rows = [r for r in grp["samples"] if r.get("available") and r.get("wind_class")]
+    if not rows:
+        return None
+    stretches = []
+    for sg in ar.wind_segments(rows, plan.line.length):
+        inside = [r for r in rows if sg["s0"] - 1 <= r["s_m"] <= sg["s1"] + 1] or rows[:1]
+        kmh = [r["wind_kmh"] for r in inside if r.get("wind_kmh") is not None]
+        dirs = [r["wind_from"] for r in inside if r.get("wind_from")]
+        stretches.append({"s0": sg["s0"], "s1": sg["s1"], "class": sg["class"], "label": WIND_WORDS[sg["class"]],
+                          "km": f"{sg['s0'] / 1000:.0f}–{sg['s1'] / 1000:.0f}", "kmh": round(sum(kmh) / len(kmh)) if kmh else None,
+                          "from": max(set(dirs), key=dirs.count) if dirs else None})
+    samples = [{"s_m": r["s_m"], "deg": r.get("wind_from_deg"), "kmh": r.get("wind_kmh"), "class": r["wind_class"], "from": r.get("wind_from"),
+                "wet": ar._is_wet(r), "eta": r.get("eta")} for r in rows]
+    present = [{"class": c, "label": WIND_WORDS[c], "color": WIND_COLORS[c]} for c in WIND_ORDER if any(st["class"] == c for st in stretches)]
+    detail = (weather_res.get("detail") or {}).get("class")
+    return {"group": grp["name"], "stretches": stretches, "samples": samples, "present": present,
+            "wet": any(sm["wet"] for sm in samples), "detail": detail}
+
+
+def _wind_marks(plan: Plan, wind: dict, xy, w: int, h: int, max_marks: int = 14) -> list[str]:
+    """An arrow (the way the wind is blowing) beside the route at each forecast point, and a rain drop where rain is likely.
+    They sit to the side of the line, on whichever side has more room, so they never cover the route."""
+    samples = wind["samples"]
+    if len(samples) > max_marks:
+        step = math.ceil(len(samples) / max_marks)
+        samples = [sm for i, sm in enumerate(samples) if i % step == 0 or sm["wet"]]
+    out = []
+    for sm in samples:
+        lat, lon = plan.line.point(sm["s_m"])
+        x, y = xy(lat, lon)
+        ax, ay = xy(*plan.line.point(max(0.0, sm["s_m"] - 500)))
+        bx, by = xy(*plan.line.point(min(plan.line.length, sm["s_m"] + 500)))
+        tx, ty = bx - ax, by - ay
+        norm = math.hypot(tx, ty) or 1.0
+        nx, ny = -ty / norm, tx / norm
+        if (x + nx * 17 - w / 2) ** 2 + (y + ny * 17 - h / 2) ** 2 > (x - nx * 17 - w / 2) ** 2 + (y - ny * 17 - h / 2) ** 2:
+            nx, ny = -nx, -ny                                  # the side nearer the middle of the map
+        px, py = min(max(x + nx * 17, 12), w - 12), min(max(y + ny * 17, 12), h - 12)
+        color = WIND_COLORS[sm["class"]]
+        if sm["deg"] is not None:
+            speed = f"{sm['kmh']:.0f} km/h " if sm["kmh"] is not None else ""
+            tip = f"Wind {speed}from the {sm['from']} ({WIND_WORDS[sm['class']].lower()}), km {sm['s_m'] / 1000:.0f}"
+            out.append(f'<g transform="translate({px:.1f} {py:.1f})"><title>{escape(tip)}</title>'
+                       f'<circle r="9.5" fill="#fff" fill-opacity="0.93" stroke="{color}" stroke-width="1.6"/>'
+                       f'<path d="M0 -6 L4.6 4.2 L0 2 L-4.6 4.2Z" fill="{color}" transform="rotate({(sm["deg"] + 180) % 360:.0f})"/></g>')
+        if sm["wet"]:
+            qx, qy = min(max(x - nx * 17, 12), w - 12), min(max(y - ny * 17, 12), h - 12)
+            when = f", about {sm['eta']}" if sm.get("eta") else ""
+            out.append(f'<g transform="translate({qx:.1f} {qy:.1f})"><title>Rain likely here (km {sm["s_m"] / 1000:.0f}{when})</title>'
+                       f'<path d="M0 -8 C5 -1 6.5 2.5 0 6.5 C-6.5 2.5 -5 -1 0 -8Z" fill="{RAIN_COLOR}" stroke="#fff" stroke-width="1.4"/></g>')
+    return out
+
+
 def map_svg(plan: Plan, stops: list[dict], hazards: list[dict], closure_hits: list[dict], warnings: list[dict],
-            w: int = 360, h: int = 260, pad: int = 14, frame=None, image_url: str | None = None) -> Markup:
+            w: int = 360, h: int = 260, pad: int = 14, frame=None, image_url: str | None = None, wind: dict | None = None) -> Markup:
     lats, lons = plan.lats, plan.lons
     line = LineString(list(zip(lons, lats))).simplify(0.0003)
     pts = list(line.coords)[:900]
@@ -164,7 +230,7 @@ def map_svg(plan: Plan, stops: list[dict], hazards: list[dict], closure_hits: li
         d = "M" + "L".join(f"{x:.1f} {y:.1f}" for x, y in (xy(la, lo) for la, lo in points))
         return f'<path d="{d}" fill="none" ' + " ".join(f'{k.replace("_", "-")}="{v}"' for k, v in attrs.items()) + "/>"
 
-    label = "Map of the route on an OpenStreetMap background" if image_url else "Map of the route"
+    label = "Map of the route" + (", coloured by wind" if wind else "") + (" on an OpenStreetMap background" if image_url else "")
     out = [f'<svg viewBox="0 0 {w} {h}" role="img" aria-label="{label}" xmlns="http://www.w3.org/2000/svg" class="sheet-map">',
            f'<rect width="{w}" height="{h}" fill="#f2f2f7" rx="12"/>']
     if image_url:
@@ -174,11 +240,18 @@ def map_svg(plan: Plan, stops: list[dict], hazards: list[dict], closure_hits: li
     for wn in warnings:
         for a, b in wn.get("sections", []):
             out.append(path(_slice(plan, a, b), stroke=level_color[wn["level"]], stroke_width=11, stroke_opacity=0.5, stroke_linecap="round"))
-    if image_url:                                    # a pale edge under the route so it reads against roads and fields
-        out.append(path([(la, lo) for lo, la in pts], stroke="#ffffff", stroke_width=7, stroke_opacity=0.85, stroke_linejoin="round", stroke_linecap="round"))
-    out.append(path([(la, lo) for lo, la in pts], stroke="#0071e3", stroke_width=3.5, stroke_linejoin="round", stroke_linecap="round"))
+    if image_url or wind:                            # a pale edge under the route so it reads against roads and fields
+        out.append(path([(la, lo) for lo, la in pts], stroke="#ffffff", stroke_width=8 if wind else 7, stroke_opacity=0.88, stroke_linejoin="round", stroke_linecap="round"))
+    if wind and wind["stretches"]:
+        for st in wind["stretches"]:
+            out.append(path(_slice(plan, st["s0"], st["s1"], 150), stroke=WIND_COLORS[st["class"]], stroke_width=4.6,
+                            stroke_linejoin="round", stroke_linecap="butt"))
+    else:
+        out.append(path([(la, lo) for lo, la in pts], stroke="#0071e3", stroke_width=3.5, stroke_linejoin="round", stroke_linecap="round"))
     for c in closure_hits:
         out.append(path(_slice(plan, c["s_start"], c["s_end"], 50), stroke="#d70015", stroke_width=6, stroke_dasharray="4 3"))
+    if wind:
+        out.extend(_wind_marks(plan, wind, xy, w, h))
     for hz in hazards:
         x, y = xy(*plan.line.point(hz["s_m"]))
         out.append(f'<polygon points="{x:.1f},{y - 6:.1f} {x - 5.5:.1f},{y + 4:.1f} {x + 5.5:.1f},{y + 4:.1f}" fill="#ff9500" stroke="#fff"><title>{escape(hz["name"])}</title></polygon>')
