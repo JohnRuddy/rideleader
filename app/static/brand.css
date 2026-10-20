@@ -340,3 +340,11 @@ summary { min-height: 44px; display: flex; align-items: center; }
   .sponsor-panel { display: none; }
   .sponsor-print { display: block; margin: 10px 0 0; padding-top: 6px; border-top: 1px solid #999; font-size: 10pt; color: #000; }
 }
+
+/* Export page: getting a route onto a phone */
+.send-phone { margin: 18px 0 8px; padding-top: 6px; border-top: 1px solid var(--line); }
+.send-qr { display: flex; gap: 20px; align-items: flex-start; margin-top: 12px; }
+.send-qr .qr { flex: none; width: 168px; padding: 8px; background: #fff; border: 2px solid var(--line-strong); border-radius: 12px; }
+.send-qr .qr svg { display: block; width: 100%; height: auto; }
+.send-url { width: 100%; max-width: 420px; padding: 8px; font: 13px/1.4 ui-monospace, Consolas, monospace; }
+@media (max-width: 719px) { .only-wide { display: none; } }

@@ -19,3 +19,4 @@ reportlab==4.2.2
 pypdf==4.3.1
 stripe==15.6.1
 Pillow>=11,<14
+segno==1.6.1

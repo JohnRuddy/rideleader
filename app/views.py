@@ -354,9 +354,15 @@ def export_page(route_id):
     route = db.session.get(Route, route_id) or abort(404)
     device = _current_device(request.args.get("device"))
     data = exp.from_route(route)
+    send = None
+    if device.key == "wahoo":                                    # a short-lived link for this route, shown as a QR code
+        from . import export_send
+        path = url_for("share.send_file", token=export_send.make_token(route.id, device.key, device.formats[0].key))
+        url = (current_app.config.get("APP_BASE_URL") or request.url_root).rstrip("/") + path
+        send = {"url": url, "qr": export_send.qr_svg(url, "QR code: open this route on your phone"), "minutes": export_send.TTL // 60}
     resp = current_app.make_response(render_template(
         "export.html", route=route, devices=exp.DEVICES.values(), device=device, count=len(data.waypoints),
-        warnings=exp.warnings_for(data, device), strava_url=exp.devices.STRAVA_NEW_ROUTE_URL))
+        warnings=exp.warnings_for(data, device), strava_url=exp.devices.STRAVA_NEW_ROUTE_URL, send=send))
     resp.set_cookie(DEVICE_COOKIE, device.key, max_age=60 * 60 * 24 * 365, samesite="Lax")
     return resp
 

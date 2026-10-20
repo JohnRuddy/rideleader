@@ -32,6 +32,24 @@
   </p>
   <ul class="steps-plain">{% for a in device.advice %}<li>{{ a }}</li>{% endfor %}</ul>
 
+  {% if send %}
+  <div class="send-phone">
+    <h3>Get it onto your Wahoo</h3>
+    <ol class="steps">
+      <li><strong>On your phone:</strong> tap <em>Download GPX</em> above, open the file, and choose the Wahoo app.</li>
+      <li>In the Wahoo app it appears under <em>Explore, My Collection, My Routes</em>. Tap <em>Send to ELEMNT</em>.</li>
+    </ol>
+    <div class="send-qr only-wide">
+      <div class="qr">{{ send.qr }}</div>
+      <div>
+        <p><strong>On a laptop?</strong> Scan this with your phone's camera. It opens the file on your phone, ready to hand to the Wahoo app.</p>
+        <p class="muted small">The link works for {{ send.minutes }} minutes and only for this route. Or copy it:
+          <input class="send-url" type="text" readonly value="{{ send.url }}" onfocus="this.select()" aria-label="Link to open this route on your phone"></p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   {% if device.key == 'strava' %}
   <h3>Send to Strava</h3>
   <p class="muted small">To put this version on Strava: Strava's API only lets apps read your routes, never create or change them, so the last step is yours. The file above holds the route with the {{ count }} cue{{ '' if count == 1 else 's' }} you have ticked.</p>

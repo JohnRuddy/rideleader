@@ -32,12 +32,12 @@ DEVICES: dict[str, Device] = {d.key: d for d in (
            ("Copy the .fit file to the device's NewFiles folder over USB, or import it in Garmin Connect (Courses → Import).",
             "Course point names are shortened to 15 characters (10 in TCX) and accents are removed for display.",
             "Newer point types (shelter, toilet, overlook…) may appear as plain points on older firmware.")),
-    Device("wahoo", "Wahoo ELEMNT", (GPX,), None,
+    Device("wahoo", "Wahoo ELEMNT", (GPX, FIT), None,
            "No published limit.",
-           ("Custom waypoints on the ELEMNT ACE, BOLT 3 and ROAM 3 (firmware 301724 or later) arrive through Strava, "
-            "RideWithGPS or Komoot sync, so the most reliable route is to upload this GPX there and sync.",
-            "Importing a plain GPX straight into the Wahoo app keeps the route, but waypoints may show as basic points "
-            "or not at all, and the ELEMNT can treat waypoints far from the track as separate points.")),
+           ("Wahoo documents opening a route file in its own app for the ELEMNT ACE, BOLT 3 and ROAM 3, so this is the quickest way: the steps and a code to scan are below.",
+            "Stops after a file import may show as basic points or not at all. If you want them as proper course points, upload the GPX to Strava, "
+            "RideWithGPS or Komoot and sync from there (custom waypoints on the ACE, BOLT 3 and ROAM 3, firmware 301724 or later, arrive that way).",
+            "GPX is the safest file. FIT is offered too because the Wahoo app accepts it: try it if the stops don't appear with GPX.")),
     Device("karoo", "Hammerhead Karoo", (GPX,), None,
            "No published limit.",
            ("Waypoints use the nine POI types users report the Karoo accepts (Food, Water, Parking, Camping, Lodging, "

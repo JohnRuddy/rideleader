@@ -64,6 +64,16 @@
     <a class="btn small link alt" href="{{ base }}/cue-card.pdf">Cue card (PDF)</a>
     <button type="button" class="btn small alt" onclick="window.print()">Print</button>
   </p>
+  <details class="noprint bike-send">
+    <summary>Send the route to my bike computer</summary>
+    <p class="small muted">On your phone, tap your device, then open the file and choose its app. For Wahoo, choose the Wahoo app, then find the route under My Routes and tap Send to ELEMNT.</p>
+    <ul>
+      <li><a href="{{ base }}/route/wahoo.gpx">Wahoo ELEMNT <span class="muted small">GPX</span></a></li>
+      <li><a href="{{ base }}/route/garmin.fit">Garmin <span class="muted small">FIT</span></a></li>
+      <li><a href="{{ base }}/route/karoo.gpx">Hammerhead Karoo <span class="muted small">GPX</span></a></li>
+      <li><a href="{{ base }}/route/gpx.gpx">Other GPS or app <span class="muted small">GPX</span></a></li>
+    </ul>
+  </details>
   <pre id="wa-text" hidden>{{ wa_text }}</pre>
   <p class="muted small" id="copy-msg" role="status"></p>
 </section>
