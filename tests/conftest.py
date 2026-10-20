@@ -8,6 +8,12 @@ from app.elevation import ElevationError
 from app.routing import RoutingError
 
 
+class OfflineTiles:
+    """Default in tests: map tiles are never fetched from the network. A test that needs tiles passes its own fake."""
+    def fetch(self, z, x, y):
+        return None
+
+
 class OfflineRouter:
     """Default in tests: any test that routes must pass its own fake, so nothing reaches the network."""
     def route(self, points, options, avoid=None):
@@ -52,7 +58,7 @@ def hilly_points(n=200, with_ele=True):
 def client():
     app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": os.environ.get(
         "TEST_DATABASE_URL", os.environ.get("DATABASE_URL")),
-        "ROUTING_CLIENT": OfflineRouter(), "ELEVATION_CLIENT": OfflineElevation(),
+        "ROUTING_CLIENT": OfflineRouter(), "ELEVATION_CLIENT": OfflineElevation(), "TILE_CLIENT": OfflineTiles(),
         "CSRF_ENABLED": False, "RATELIMIT_ENABLED": False, "STRAVA_MODE": "off", "STRAVA_CLIENT": None, "MAILER": CaptureMailer(), "SECRET_KEY": "test-secret-key", "INVITE_REQUIRED": False})
     with app.app_context():
         yield app.test_client()

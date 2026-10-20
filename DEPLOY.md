@@ -83,6 +83,10 @@ gunzip -c backups/<file>.sql.gz | docker compose -f docker-compose.prod.yml exec
   `docker-compose.yml` runs your own, which needs several GB of disk and a long first import, so it is not on this
   shared server by default.
 - **Map tiles**: the public OpenStreetMap tile server is for light use. Set `TILE_URL` to a tile provider if traffic grows.
+  The ride sheet's map picture (`/r/<token>/map.webp`) is made by the server from those tiles (about 10 to 30 per route,
+  cached 14 days in Redis, identified by a `RideLeaderKit/1.0` user agent), so riders' browsers never contact a tile server.
+  `BASEMAP_ENABLED=0` turns the picture off and the sheet goes back to the plain route outline. If the tiles can't be reached
+  the sheet shows the outline too.
 - **Service names on `edge`**: a compose service name becomes a DNS name on every network it joins, so this app's web
   service is `rl-web`. A second service called `web` on `edge` would hijack checkmysitemap.com's traffic.
 - **Shared Caddy**: if the checkmysitemap.com deploy ever replaces its Caddy files, keep the `edge` network, the

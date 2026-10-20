@@ -51,6 +51,7 @@ def create_app(config: dict | None = None) -> Flask:
         SQLALCHEMY_DATABASE_URI=os.environ.get("DATABASE_URL", "postgresql+psycopg://rlk:rlk_dev_only@db:5432/rlk"),
         MAX_CONTENT_LENGTH=20 * 1024 * 1024,
         TILE_URL=os.environ.get("TILE_URL", "https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+        BASEMAP_ENABLED=os.environ.get("BASEMAP_ENABLED", "1") == "1",           # a real map behind the route on ride sheets
         SECRET_KEY=os.environ.get("SECRET_KEY", "dev-only-change-me"),
         REDIS_URL=os.environ.get("REDIS_URL", "redis://redis:6379/0"),
         OVERPASS_URL=os.environ.get("OVERPASS_URL", "https://overpass-api.de/api/interpreter"),

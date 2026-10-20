@@ -17,7 +17,7 @@ from flask import current_app
 from markupsafe import Markup
 from shapely.geometry import LineString
 
-from . import categories, closures as cl, hours as hrs
+from . import basemap, categories, closures as cl, hours as hrs
 from . import warnings_feed as wf
 from .models import Waypoint
 from .plan import Plan, clock_now
@@ -79,7 +79,8 @@ def _cafes(plan: Plan) -> tuple[list[dict], str | None]:
     return [r for r in rows if r["id"] in keep], None
 
 
-def build(route, plan: Plan | None = None, public: bool = False) -> dict:
+def build(route, plan: Plan | None = None, public: bool = False, map_url: str | None = None) -> dict:
+    """`map_url` is where this page's map picture can be fetched; without it (the WhatsApp text, the PDF) the outline is drawn alone."""
     plan = plan or Plan(route)
     now = clock_now()
     tz = ZoneInfo(plan.tz)
@@ -120,7 +121,11 @@ def build(route, plan: Plan | None = None, public: bool = False) -> dict:
         "attribution": ["Map and stop data © OpenStreetMap contributors (ODbL)", wf.ATTRIBUTION]
                        + weather_res.get("attribution", []) + ["County boundaries: Tailte Éireann (CC BY 4.0)"],
     }
-    sheet["map_svg"] = map_svg(plan, stops, hazards, closure["hits"], banner["warnings"])
+    frame, image_url = None, None
+    if map_url and basemap.get_client(current_app.config) is not None:
+        frame = basemap.frame_for_plan(plan)
+        image_url = f"{map_url}?v={basemap.frame_key(frame, current_app.config.get('TILE_URL', ''))}"
+    sheet["map_svg"] = map_svg(plan, stops, hazards, closure["hits"], banner["warnings"], frame=frame, image_url=image_url)
     sheet["profile_svg"] = profile_svg(plan, sheet["climbs"], stops)
     return sheet
 
@@ -130,7 +135,7 @@ def _dur(seconds: float) -> str:
     return f"{m // 60}h {m % 60:02d}m" if m >= 60 else f"{m}m"
 
 
-# ------------------------------------------------------------------ lightweight inline SVG (no tiles, no JavaScript)
+# ------------------------------------------------------------------ lightweight inline SVG (no JavaScript; the map picture is a separate image)
 
 def _slice(plan: Plan, s0: float, s1: float, step: float = 200.0):
     ss = list(np.arange(max(s0, 0), min(s1, plan.line.length), step)) + [min(s1, plan.line.length)]
@@ -138,7 +143,7 @@ def _slice(plan: Plan, s0: float, s1: float, step: float = 200.0):
 
 
 def map_svg(plan: Plan, stops: list[dict], hazards: list[dict], closure_hits: list[dict], warnings: list[dict],
-            w: int = 360, h: int = 260, pad: int = 14) -> Markup:
+            w: int = 360, h: int = 260, pad: int = 14, frame=None, image_url: str | None = None) -> Markup:
     lats, lons = plan.lats, plan.lons
     line = LineString(list(zip(lons, lats))).simplify(0.0003)
     pts = list(line.coords)[:900]
@@ -151,18 +156,26 @@ def map_svg(plan: Plan, stops: list[dict], hazards: list[dict], closure_hits: li
     ox, oy = (w - span_x * scale) / 2 - min(xs) * scale, (h - span_y * scale) / 2 - min(ys) * scale
 
     def xy(lat, lon):
+        if frame is not None:
+            return frame.project(lat, lon, w, h)
         return (lon * kx) * scale + ox, (-lat) * scale + oy
 
     def path(points, **attrs):
         d = "M" + "L".join(f"{x:.1f} {y:.1f}" for x, y in (xy(la, lo) for la, lo in points))
         return f'<path d="{d}" fill="none" ' + " ".join(f'{k.replace("_", "-")}="{v}"' for k, v in attrs.items()) + "/>"
 
-    out = [f'<svg viewBox="0 0 {w} {h}" role="img" aria-label="Map of the route" xmlns="http://www.w3.org/2000/svg" class="sheet-map">',
+    label = "Map of the route on an OpenStreetMap background" if image_url else "Map of the route"
+    out = [f'<svg viewBox="0 0 {w} {h}" role="img" aria-label="{label}" xmlns="http://www.w3.org/2000/svg" class="sheet-map">',
            f'<rect width="{w}" height="{h}" fill="#f2f2f7" rx="12"/>']
+    if image_url:
+        out.append(f'<clipPath id="mapclip"><rect width="{w}" height="{h}" rx="12"/></clipPath>'
+                   f'<image href="{escape(image_url)}" x="0" y="0" width="{w}" height="{h}" preserveAspectRatio="none" clip-path="url(#mapclip)"/>')
     level_color = {"yellow": "#ffcc00", "orange": "#ff9500", "red": "#d70015"}
     for wn in warnings:
         for a, b in wn.get("sections", []):
             out.append(path(_slice(plan, a, b), stroke=level_color[wn["level"]], stroke_width=11, stroke_opacity=0.5, stroke_linecap="round"))
+    if image_url:                                    # a pale edge under the route so it reads against roads and fields
+        out.append(path([(la, lo) for lo, la in pts], stroke="#ffffff", stroke_width=7, stroke_opacity=0.85, stroke_linejoin="round", stroke_linecap="round"))
     out.append(path([(la, lo) for lo, la in pts], stroke="#0071e3", stroke_width=3.5, stroke_linejoin="round", stroke_linecap="round"))
     for c in closure_hits:
         out.append(path(_slice(plan, c["s_start"], c["s_end"], 50), stroke="#d70015", stroke_width=6, stroke_dasharray="4 3"))
@@ -180,6 +193,9 @@ def map_svg(plan: Plan, stops: list[dict], hazards: list[dict], closure_hits: li
         x, y = xy(*plan.line.point(s))
         out.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="8" fill="{color}" stroke="#fff" stroke-width="2"/>'
                    f'<text x="{x:.1f}" y="{y + 3.5:.1f}" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">{label}</text>')
+    if image_url:
+        out.append(f'<rect x="{w - 134}" y="{h - 15}" width="134" height="15" fill="#ffffff" fill-opacity="0.82"/>'
+                   f'<text x="{w - 5}" y="{h - 4.5}" font-size="8" text-anchor="end" fill="#333333">{escape(basemap.ATTRIBUTION)}</text>')
     out.append("</svg>")
     return Markup("".join(out))
 
