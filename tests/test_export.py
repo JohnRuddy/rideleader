@@ -200,8 +200,9 @@ def test_resolve_rejects_unknown_device_or_format():
     with pytest.raises(KeyError):
         resolve("nokia", None)
     with pytest.raises(KeyError):
-        resolve("wahoo", "fit")
+        resolve("wahoo", "tcx")                                  # Wahoo takes GPX and FIT, not TCX, in this app
     assert resolve("garmin", None)[1].key == "fit"
+    assert resolve("wahoo", None)[1].key == "gpx" and resolve("wahoo", "fit")[1].key == "fit"
 
 
 # ---------- golden files ----------

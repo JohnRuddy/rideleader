@@ -25,3 +25,9 @@
   a { color: #000; text-decoration: none; }
   .warn-banner { border: 2px solid #000; }
 }
+.bike-send { margin: 6px 0 2px; }
+.bike-send summary { cursor: pointer; font-weight: 700; padding: 10px 0; min-height: 44px; }
+.bike-send ul { list-style: none; margin: 4px 0 8px; padding: 0; }
+.bike-send li a { display: inline-block; padding: 10px 0; font-weight: 700; }
+.bike-send summary::before { content: "\25B8\a0\a0"; }
+.bike-send[open] > summary::before { content: "\25BE\a0\a0"; }

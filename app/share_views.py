@@ -12,6 +12,8 @@ from datetime import datetime
 from flask import Blueprint, Response, abort, current_app, g, jsonify, render_template, request, url_for
 
 from . import basemap, cue_card, db, ratelimit
+from . import export as exp
+from . import export_send
 from . import ride_sheet as rs
 from . import sponsors
 from . import strava_service as svc
@@ -165,6 +167,50 @@ def _map_picture(route: Route) -> Response:
 @bp.get("/r/<token>/map.webp")
 def public_map(token):
     return _map_picture(_public_ride(token).route)
+
+
+def _route_file(route: Route, name: str) -> Response:
+    """The route as a file for a bike computer, e.g. wahoo.gpx or garmin.fit: the track and the stops the leader ticked."""
+    device_key, _, ext = name.partition(".")
+    dev = exp.DEVICES.get(device_key)
+    fmt = next((f for f in dev.formats if f.ext == ext), None) if dev else None
+    if fmt is None:
+        abort(404)
+    if not ratelimit.allow("routefile", request.remote_addr or "?", 30, 60):
+        return Response("Too many downloads. Try again in a minute.", status=429, headers={"Retry-After": "60"})
+    out = exp.render(exp.from_route(route), dev.key, fmt.key, export_send.slug(route.title))
+    resp = Response(out.data, mimetype=out.fmt.mime, headers={"Content-Disposition": f'attachment; filename="{out.filename}"'})
+    resp.headers["Cache-Control"] = "no-store"
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Robots-Tag"] = "noindex, nofollow"
+    resp.headers["Referrer-Policy"] = "no-referrer"
+    return resp
+
+
+@bp.get("/r/<token>/route/<name>")
+def public_route_file(token, name):
+    return _route_file(_public_ride(token).route, name)
+
+
+@bp.get("/routes/<int:route_id>/route/<name>")
+def route_file(route_id, name):
+    return _route_file(db.session.get(Route, route_id) or abort(404), name)
+
+
+@bp.get("/send/<token>")
+def send_file(token):
+    """The phone link from the Export page: opens one route's file, for 20 minutes, with no sign-in."""
+    got = export_send.read_token(token)
+    if got == "expired":
+        return Response("This link has expired. Make a new one on the route's Export page.", status=410,
+                        headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow"})
+    if not got:
+        abort(404)
+    route_id, device_key, fmt_key = got
+    route = db.session.get(Route, route_id) or abort(404)
+    dev = exp.DEVICES.get(device_key) or abort(404)
+    fmt = next((f for f in dev.formats if f.key == fmt_key), None) or abort(404)
+    return _route_file(route, f"{dev.key}.{fmt.ext}")
 
 
 @bp.get("/r/<token>/summary.txt")
