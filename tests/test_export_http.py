@@ -64,7 +64,8 @@ def test_garmin_tcx_end_to_end(ready):
 
 def test_bad_device_or_format_is_400(ready):
     assert dl(ready, "nokia").status_code == 400
-    assert dl(ready, "wahoo", "fit").status_code == 400
+    assert dl(ready, "wahoo", "tcx").status_code == 400
+    assert dl(ready, "wahoo", "fit").status_code == 200
     assert ready.get("/routes/99/export").status_code == 404
 
 
